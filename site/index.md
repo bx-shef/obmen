@@ -43,7 +43,7 @@
 ## Цены и заказ
 
 <!-- offer:start — keep identical in site/llms.txt and site/index.md (CI compares) -->
-**Исполнитель стороны сайта / Битрикс24:** ИП Шевчик И. С. (bx-shef.by), УНП 192049017, Минск. Реквизиты: https://offer.bx-shef.by/legal/
+**Исполнитель стороны сайта / Битрикс24:** ИП Шевчик И. С. (bx-shef.by), УНП 192049017, Минск; реквизиты: https://offer.bx-shef.by/legal/
 
 **Цены — сторона сайта / Битрикс24, BYN:**
 
