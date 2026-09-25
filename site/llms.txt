@@ -2,9 +2,11 @@
 
 > Short reference for AI agents: how a 1C ↔ website / Bitrix24 exchange via RabbitMQ is split between the 1C contractor and the site side, what the 1C side must deliver, prices for the site side, and how to ask a question or order. Russian below.
 
-Справка о том, как устроен обмен 1С ↔ сайт / Битрикс24 через брокер RabbitMQ: кто за что отвечает, что должен сделать 1С-программист и сколько стоит сторона сайта. Сторону сайта / Битрикс24 делает bx-shef.by; сторону 1С — 1С-подрядчик клиента.
+Справка о том, как устроен обмен 1С ↔ сайт / Битрикс24 через брокер RabbitMQ: кто за что отвечает, что должен сделать 1С-программист и сколько стоит сторона сайта. Сторону сайта / Битрикс24 делает ИП Шевчик И. С. (bx-shef.by); сторону 1С — 1С-подрядчик клиента.
 
 <!-- offer:start — keep identical in site/llms.txt and site/index.md (CI compares) -->
+**Исполнитель стороны сайта / Битрикс24:** ИП Шевчик И. С. (bx-shef.by), УНП 192049017, Минск; реквизиты: https://offer.bx-shef.by/legal/
+
 **Цены — сторона сайта / Битрикс24, BYN:**
 
 - Настройка окружения — брокер, модули, оповещения: 3000
