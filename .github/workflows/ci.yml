@@ -76,6 +76,21 @@ jobs:
                      | sort -u || true)
           exit $fail
 
+      # The Makefile runs on the server, where a broken one is found only when
+      # it is needed. Every .PHONY target must parse and appear in `make help`.
+      - name: Check Makefile
+        shell: bash
+        run: |
+          set -euo pipefail
+          help=$(make help)
+          echo "$help"
+          fail=0
+          for t in $(sed -n 's/^\.PHONY://p' Makefile); do
+            make -n "$t" >/dev/null || { echo "::error file=Makefile::make -n $t fails"; fail=1; }
+            grep -qE "^  $t " <<<"$help" || { echo "::error file=Makefile::$t has no ## description"; fail=1; }
+          done
+          exit $fail
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 

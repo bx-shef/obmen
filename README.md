@@ -18,7 +18,7 @@ Same delivery scheme as [`client-bank-alfa-by`](https://github.com/bx-shef/clien
 ## Local preview
 
 ```bash
-docker compose up --build      # http://localhost:8082
+docker compose up --build      # http://localhost:8082  (same as: make build-local)
 ```
 
 ## Pipeline
@@ -53,6 +53,7 @@ sees plain http); it belongs to the shared nginx-proxy.
 ```bash
 mkdir -p /home/bitrix/obmen && cd /home/bitrix/obmen
 curl -fsSL -O https://raw.githubusercontent.com/bx-shef/obmen/main/docker-compose.prod.yml
+curl -fsSL -O https://raw.githubusercontent.com/bx-shef/obmen/main/Makefile
 cat > .env <<'ENV'
 DOMAIN=obmen.bx-shef.by
 LETSENCRYPT_EMAIL=you@example.com
@@ -89,8 +90,25 @@ Watchtower keeps watching the pinned tag, which never changes, so the site stays
 on it. After the fix is merged, delete the `IMAGE_TAG` line and run `up -d`
 again to return to `latest`.
 
-`docker-compose.prod.yml` is not updated by Watchtower — after changing it,
-re-run the `curl` above and `up -d`.
+`docker-compose.prod.yml` is not updated by Watchtower — after it changes in
+the repository, run `make compose-update` (see below).
+
+### Makefile on the server
+
+The `Makefile` wraps the commands above; it lives next to
+`docker-compose.prod.yml` and `.env`. On a server set up before it existed,
+fetch it once with the `curl … /Makefile` line above. `make help` lists:
+
+| Target | What it does |
+|---|---|
+| `make ps` / `make logs` | container state (look for `healthy`) / follow the log |
+| `make prod-redeploy` | pull and restart now, without waiting ~5 min for Watchtower |
+| `make prod-up` / `prod-down` / `prod-pull` | start or update / stop / only download the image |
+| `make compose-update` | show the diff to the repository's `docker-compose.prod.yml`; `CONFIRM=1` replaces it (backup kept), then `make prod-up` |
+| `make self-update` | replace the Makefile with the repository version (backup kept) |
+
+`REF=<branch or tag>` makes the two update targets download from somewhere
+other than `main`.
 
 ## Updating content
 
@@ -107,9 +125,7 @@ The PDFs come from **separate print sources**, not from the web pages:
 
 ⚠ The text exists twice — in `site/*.html` and in `print/*.html`. A content
 change must be made in both. The OG cards carry short standalone titles: update
-`print/og.html` when a page title or description changes. Messengers cache previews, so a
-changed card may show up only after the cache expires (or via the Facebook
-Sharing Debugger / Telegram @WebpageBot). File names are fixed in `print/render.py`; keep
+`print/og.html` when a page title or description changes. File names are fixed in `print/render.py`; keep
 them, the pages link to them.
 
 How the PDFs are built: the first `Dockerfile` stage runs `print/render.py` on
