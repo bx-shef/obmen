@@ -107,10 +107,19 @@ change must be made in both. File names are fixed in `print/render.py`; keep
 them, the pages link to them.
 
 How the PDFs are built: the first `Dockerfile` stage runs `print/render.py` on
-`mcr.microsoft.com/playwright/python:v1.56.0-noble`, the nginx stage copies the
-result into `/files/`. The image tag and `print/requirements.txt` must name the
-same Playwright version — each release bundles its own Chromium, and a mismatch
-fails the build. Bump both in one PR.
+`mcr.microsoft.com/playwright/python:v1.56.0-noble` (pinned by digest), the
+nginx stage copies the result into `/files/`. Every CI run uploads the rendered
+PDFs as the `pdf` artifact (Actions → run → Artifacts) — look there to review
+how a change renders, since the PDFs are not in the PR diff.
+
+The image tag and `print/requirements.txt` must name the same Playwright
+version — each release bundles its own Chromium, and a mismatch fails the
+build. Dependabot skips this image, so bump both by hand in one PR (tag,
+digest, requirements) when a Playwright release matters.
+
+Trade-off: every image build now pulls from `mcr.microsoft.com` and PyPI. If
+either is down, CI and the deploy fail; the site already running keeps
+serving the previous image.
 
 To look at a PDF before pushing, render it locally (writes `site/files/*.pdf`,
 ignored by git) or run `docker compose up --build`:
@@ -118,7 +127,7 @@ ignored by git) or run `docker compose up --build`:
 ```bash
 pip install -r print/requirements.txt
 python -m playwright install chromium
-python print/render.py
+python print/render.py   # writes site/files/*.pdf
 ```
 
 Fonts are static instances of OFL fonts in `print/fonts/` (licences next to them):
