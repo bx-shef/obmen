@@ -194,9 +194,21 @@ jobs:
           done
           llms=$(curl -fsS http://127.0.0.1:8080/llms.txt) || { echo "::error::/llms.txt is not 200"; fail=1; llms=""; }
           head -1 <<<"$llms" | grep -q '^# ' || { echo "::error::/llms.txt must start with an H1"; fail=1; }
-          for path in $(grep -oE 'https://obmen\.bx-shef\.by/[^) ]*' <<<"$llms" | sed 's#https://obmen.bx-shef.by##' | sort -u || true); do
-            curl -fsS -o /dev/null "http://127.0.0.1:8080$path" || { echo "::error::/llms.txt links $path, which is not 200"; fail=1; }
+          for h in '## Страницы' '## Заказ'; do
+            grep -qx "$h" <<<"$llms" || { echo "::error::/llms.txt lacks the section '$h'"; fail=1; }
           done
+          # Every obmen link in the agent-facing files must resolve.
+          for f in llms.txt index.md plan.md; do
+            body=$(curl -fsS "http://127.0.0.1:8080/$f") || continue
+            for path in $(grep -oE 'https://obmen\.bx-shef\.by/[^) `]*' <<<"$body" | sed 's#https://obmen.bx-shef.by##' | sort -u || true); do
+              curl -fsS -o /dev/null "http://127.0.0.1:8080$path" || { echo "::error::/$f links $path, which is not 200"; fail=1; }
+            done
+          done
+          # Prices, discount and contact: one block, identical in both files.
+          block() { sed -n '/<!-- offer:start/,/<!-- offer:end -->/p' "$1"; }
+          [ -n "$(block site/llms.txt)" ] || { echo "::error file=site/llms.txt::offer block missing"; fail=1; }
+          diff <(block site/llms.txt) <(block site/index.md) >/dev/null \
+            || { echo "::error file=site/index.md::offer block differs from site/llms.txt"; fail=1; }
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/no-such-page)
           [ "$code" = 404 ] || { echo "::error::unknown path returned $code, expected 404"; fail=1; }
           exit $fail

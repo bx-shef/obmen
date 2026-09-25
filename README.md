@@ -153,8 +153,9 @@ The PDFs come from **separate print sources**, not from the web pages:
 | `/files/og.png`, `/files/og-plan.png` | `print/og.html` (`#plan` for the plan card) | 1200×630 PNG, `og:image` of `index.html` / `plan.html` |
 
 ⚠ The text exists three times — in `site/*.html`, in `print/*.html` and, shortened,
-in `site/*.md`. A content change must be made in all of them; prices and contact
-terms also live in `site/llms.txt`. The OG cards carry short standalone titles: update
+in `site/*.md`. A content change must be made in all of them. Prices, the
+discount and the contact exist only in the Markdown for agents: one block,
+identical in `site/llms.txt` and `site/index.md` (CI compares them). The OG cards carry short standalone titles: update
 `print/og.html` when a page title or description changes. File names are fixed in `print/render.py`; keep
 them, the pages link to them.
 
