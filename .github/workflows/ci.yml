@@ -177,6 +177,38 @@ jobs:
               || { echo "::error::$path is not a valid PNG"; fail=1; continue; }
             [ "$size" = 1200x630 ] || { echo "::error::$path is $size, expected 1200x630"; fail=1; }
           done
+          # Markdown for AI agents: each page's <link rel="alternate"> twin is served
+          # as text/markdown, the page URL itself returns Markdown only when asked
+          # for it in Accept, and every obmen link in /llms.txt resolves.
+          for page in site/*.html; do
+            twin=$(grep -oE '<link rel="alternate" type="text/markdown" href="[^"]+"' "$page" | sed -E 's/.*href="//; s/"$//' || true)
+            [ -n "$twin" ] || { echo "::error file=$page::no <link rel=\"alternate\" type=\"text/markdown\">"; fail=1; continue; }
+            url=/${page#site/}
+            type=$(curl -fsS -o /dev/null -w '%{content_type}' "http://127.0.0.1:8080$twin") \
+              || { echo "::error::$twin is not 200"; fail=1; continue; }
+            [[ "$type" == text/markdown* ]] || { echo "::error::$twin is $type, expected text/markdown"; fail=1; }
+            type=$(curl -fsS -o /dev/null -w '%{content_type}' -H 'Accept: text/markdown, */*' "http://127.0.0.1:8080$url")
+            [[ "$type" == text/markdown* ]] || { echo "::error::$url with Accept: text/markdown is $type"; fail=1; }
+            type=$(curl -fsS -o /dev/null -w '%{content_type}' -H 'Accept: text/html,*/*;q=0.8' "http://127.0.0.1:8080$url")
+            [[ "$type" == text/html* ]] || { echo "::error::$url for a browser is $type"; fail=1; }
+          done
+          llms=$(curl -fsS http://127.0.0.1:8080/llms.txt) || { echo "::error::/llms.txt is not 200"; fail=1; llms=""; }
+          head -1 <<<"$llms" | grep -q '^# ' || { echo "::error::/llms.txt must start with an H1"; fail=1; }
+          for h in '## Страницы' '## Заказ'; do
+            grep -qx "$h" <<<"$llms" || { echo "::error::/llms.txt lacks the section '$h'"; fail=1; }
+          done
+          # Every obmen link in the agent-facing files must resolve.
+          for f in llms.txt index.md plan.md; do
+            body=$(curl -fsS "http://127.0.0.1:8080/$f") || continue
+            for path in $(grep -oE 'https://obmen\.bx-shef\.by/[^) `]*' <<<"$body" | sed 's#https://obmen.bx-shef.by##' | sort -u || true); do
+              curl -fsS -o /dev/null "http://127.0.0.1:8080$path" || { echo "::error::/$f links $path, which is not 200"; fail=1; }
+            done
+          done
+          # Prices, discount and contact: one block, identical in both files.
+          block() { sed -n '/<!-- offer:start/,/<!-- offer:end -->/p' "$1"; }
+          [ -n "$(block site/llms.txt)" ] || { echo "::error file=site/llms.txt::offer block missing"; fail=1; }
+          diff <(block site/llms.txt) <(block site/index.md) >/dev/null \
+            || { echo "::error file=site/index.md::offer block differs from site/llms.txt"; fail=1; }
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/no-such-page)
           [ "$code" = 404 ] || { echo "::error::unknown path returned $code, expected 404"; fail=1; }
           exit $fail

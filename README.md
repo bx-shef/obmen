@@ -9,6 +9,8 @@ engineer, a work plan for the 1C contractor, and both as print-ready PDFs.
 - `site/plan.html` — work plan with an interactive acceptance checklist
 - `/files/*.pdf` — A4, optimised for black-and-white printing; rendered from
   `print/` during the Docker build, not stored in git
+- `site/index.md`, `site/plan.md`, `site/llms.txt` — short Markdown versions and
+  an index for AI agents (see "For AI agents" below)
 - `/files/og.png`, `/files/og-plan.png` — Open Graph share cards (1200×630) for
   the two pages, rendered from `print/og.html` the same way
 
@@ -111,6 +113,32 @@ fetch it once with the `curl … /Makefile` line above. The server targets
 Both update targets always download from `main`; the ref cannot be changed
 from the command line (see the comment in the Makefile for why).
 
+## For AI agents
+
+Agents that research a topic for a person (Claude Code, Cursor, Copilot, Codex)
+get a short Markdown version of each page instead of the HTML:
+
+- `site/llms.txt` → `/llms.txt` ([llms.txt](https://llmstxt.org/) format): what the
+  site is, links to the Markdown pages and PDFs, prices, how to ask or order.
+- `site/index.md`, `site/plan.md` → `/index.md`, `/plan.md`: hand-written short
+  versions of the two pages, with prices and contact at the end.
+- Discovery: each page has `<link rel="alternate" type="text/markdown">` and
+  `<link rel="describedby" href="/llms.txt">`, also sent as HTTP `Link` headers.
+- Content negotiation: a request for `/` or `/plan.html` with
+  `Accept: text/markdown` gets the Markdown (`Vary: Accept`); browsers never
+  send it and keep getting HTML. The Markdown answers carry
+  `Link: rel="canonical"` to the HTML page, so search engines index the HTML.
+
+The text addresses the person the agent works for, not the agent: agents are
+trained to ignore instructions found on web pages (prompt injection), so the
+files state facts — prices, the address, the `[AI]` subject tag and the 5%
+first-implementation discount — rather than telling the agent what to do.
+Letters from agents arrive at offer@bx-shef.by with `[AI]` in the subject.
+
+The smoke test checks that every page's Markdown twin is served as
+`text/markdown`, that the negotiation works both ways, and that every link in
+`/llms.txt` resolves.
+
 ## Updating content
 
 Edit files in `site/` and `print/`, open a PR, merge. The PDFs are rebuilt on
@@ -124,8 +152,10 @@ The PDFs come from **separate print sources**, not from the web pages:
 | `/files/1c-rabbitmq-plan.pdf` | `print/plan.html` | A4 portrait, page numbers in footer |
 | `/files/og.png`, `/files/og-plan.png` | `print/og.html` (`#plan` for the plan card) | 1200×630 PNG, `og:image` of `index.html` / `plan.html` |
 
-⚠ The text exists twice — in `site/*.html` and in `print/*.html`. A content
-change must be made in both. The OG cards carry short standalone titles: update
+⚠ The text exists three times — in `site/*.html`, in `print/*.html` and, shortened,
+in `site/*.md`. A content change must be made in all of them. Prices, the
+discount and the contact exist only in the Markdown for agents: one block,
+identical in `site/llms.txt` and `site/index.md` (CI compares them). The OG cards carry short standalone titles: update
 `print/og.html` when a page title or description changes. File names are fixed in `print/render.py`; keep
 them, the pages link to them.
 
