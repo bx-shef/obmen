@@ -9,7 +9,8 @@ build output and are not committed. For a local preview (from the repo root):
 Playwright is pinned (here and in the Dockerfile image tag): each release
 bundles its own Chromium, which lays out and embeds fonts differently.
 
-Writes site/files/1c-rabbitmq-presentation.pdf and site/files/1c-rabbitmq-plan.pdf.
+Writes site/files/1c-rabbitmq-presentation.pdf, site/files/1c-rabbitmq-plan.pdf
+and the Open Graph cards site/files/og.png, site/files/og-plan.png (1200×630).
 """
 from pathlib import Path
 
@@ -27,6 +28,9 @@ PLAN_FOOTER = (
     "<span>План работ для 1С-программиста · обмен через RabbitMQ</span>"
     '<span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>'
 )
+
+# Open Graph image size recommended by Facebook/Telegram/VK (1.91:1).
+OG_SIZE = {"width": 1200, "height": 630}
 
 
 def main() -> None:
@@ -58,6 +62,16 @@ def main() -> None:
             header_template="<span></span>",
             footer_template=PLAN_FOOTER,
         )
+
+        # Open Graph cards: one template, the #plan fragment switches the text.
+        # A fresh page per card, so the fragment is read on a real load.
+        for fragment, name in (("", "og.png"), ("#plan", "og-plan.png")):
+            card = browser.new_page(viewport=OG_SIZE)
+            card.goto((HERE / "og.html").as_uri() + fragment)
+            card.wait_for_load_state("networkidle")
+            card.evaluate("document.fonts.ready.then(() => true)")
+            card.screenshot(path=str(OUT / name), clip={"x": 0, "y": 0, **OG_SIZE})
+            card.close()
 
         browser.close()
     print(f"written to {OUT}")

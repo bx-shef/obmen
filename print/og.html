@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- Open Graph share cards, 1200×630, rendered by render.py to
+     site/files/og.png (index.html) and site/files/og-plan.png (plan.html,
+     via the #plan fragment).
+     Card text is standalone, tuned for a small preview: re-sync by hand when a
+     page title or description changes.
+     Font stacks list our own fonts as fallbacks: Manrope has no ↔ (Inter has),
+     neither has ✕ (JB has), and a system fallback varies between machines. -->
+<html lang="ru"><head><meta charset="utf-8"><title>OG card</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1200px;height:630px}
+body{background:#0E1726;color:#fff;font-family:Inter,JB,sans-serif;position:relative;overflow:hidden}
+body:before{content:"";position:absolute;right:-220px;top:-300px;width:760px;height:760px;border-radius:50%;
+  background:radial-gradient(circle,rgba(242,107,29,.42),rgba(242,107,29,0) 65%)}
+body:after{content:"";position:absolute;left:-220px;bottom:-380px;width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(circle,rgba(18,124,122,.35),rgba(18,124,122,0) 65%)}
+.card{position:relative;z-index:1;height:100%;padding:72px 84px;display:flex;flex-direction:column}
+.tag{display:flex;align-items:center;gap:14px;font:600 22px/1 Inter;letter-spacing:.14em;text-transform:uppercase;color:#F7A774}
+.tag i{width:12px;height:12px;border-radius:50%;background:#F26B1D}
+h1{font:800 76px/1.04 Manrope,Inter;letter-spacing:-.035em;margin-top:30px}
+h1 span{color:#F26B1D}
+.flow{display:flex;align-items:center;gap:18px;margin-top:auto}
+.pill{padding:16px 26px;border-radius:16px;font:700 28px/1 Manrope;border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05)}
+.pill.o{border-color:#F26B1D;color:#F7A774}
+.arrow{width:48px;height:2px;background:rgba(255,255,255,.45);position:relative}
+.arrow:after{content:"";position:absolute;right:-1px;top:-6px;border:7px solid transparent;border-left:10px solid rgba(255,255,255,.45);border-right:0}
+.foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:36px;font:500 24px/1 Inter;color:#AEB7C6}
+.foot b{color:#fff;font-weight:600}
+.plan{display:none}
+body.is-plan .plan{display:block}
+body.is-plan .deck{display:none}
+</style></head>
+<body>
+<div class="card">
+  <div class="tag"><i></i><span class="deck">Архитектура обмена для инженера</span><span class="plan">План работ для 1С-программиста</span></div>
+  <h1 class="deck">Обмен 1С ↔ сайт<br>через <span>RabbitMQ</span></h1>
+  <h1 class="plan">Обмен 1С ↔ Битрикс24<br>через <span>RabbitMQ</span></h1>
+  <div class="flow">
+    <div class="pill">1С</div><div class="arrow"></div>
+    <div class="pill o">RabbitMQ</div><div class="arrow"></div>
+    <div class="pill">Сайт / Битрикс24</div>
+  </div>
+  <div class="foot"><span class="deck">Кто отвечает за доставку и где граница ответственности</span><span class="plan">Что поставить, что решить, что написать · чек-лист приёмки</span><b>obmen.bx-shef.by</b></div>
+</div>
+<script>if(location.hash==='#plan')document.body.classList.add('is-plan');</script>
+</body></html>

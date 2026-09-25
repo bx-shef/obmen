@@ -7,3 +7,4 @@ docker-compose*.yml
 .DS_Store
 # Rendered by the pdf stage; a stale local render must not leak into the image.
 site/files/*.pdf
+site/files/og*.png
