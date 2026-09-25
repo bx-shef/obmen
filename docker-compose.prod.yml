@@ -5,7 +5,9 @@
 # Do NOT start a second Watchtower here: it conflicts on container_name and
 # causes double restarts.
 #
-# .env next to this file: DOMAIN, LETSENCRYPT_EMAIL.
+# .env next to this file: DOMAIN, LETSENCRYPT_EMAIL, optional IMAGE_TAG
+# (defaults to `latest`; set to `sha-<short>` to pin a release for a rollback —
+# Watchtower then has nothing newer to pull, since sha tags never move).
 
 x-logging: &default-logging
   driver: json-file
@@ -17,7 +19,7 @@ x-logging: &default-logging
 services:
   app:
     logging: *default-logging
-    image: ghcr.io/bx-shef/obmen:latest
+    image: ghcr.io/bx-shef/obmen:${IMAGE_TAG:-latest}
     container_name: obmen
     expose:
       - "8080"

@@ -33,31 +33,74 @@ jobs:
 
       # Every local href/src in the pages must point to a committed file.
       # A missing PDF would otherwise ship as a silent 404 on the download button.
+      # Scope: href/src attributes in site/*.html only (either quote style);
+      # srcset, CSS url() and paths inside JS are not checked.
       - name: Check local links
+        shell: bash
         run: |
-          set -eu
+          set -euo pipefail
+          shopt -s nullglob
+          pages=(site/*.html)
+          if [ ${#pages[@]} -eq 0 ]; then
+            echo "::error::no HTML pages found in site/"
+            exit 1
+          fi
           fail=0
-          for page in site/*.html; do
-            for ref in $(grep -oE '(href|src)="[^"#:]+"' "$page" | sed -E 's/^(href|src)="//; s/"$//' | sort -u); do
+          for page in "${pages[@]}"; do
+            # Drop ?query / #fragment; skip pure anchors and anything with a scheme.
+            while IFS= read -r ref; do
               if [ ! -e "site/$ref" ]; then
                 echo "::error file=$page::missing target: $ref"
                 fail=1
               fi
-            done
+            done < <(grep -oE "(href|src)=(\"[^\"]*\"|'[^']*')" "$page" \
+                       | sed -E "s/^(href|src)=[\"']//; s/[\"']$//; s/[?#].*$//" \
+                       | grep -vE '^$|^[A-Za-z][A-Za-z0-9+.-]*:|^//' \
+                       | sort -u || true)
           done
           exit $fail
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
-      # Also runs `nginx -t` inside the Dockerfile.
+      # Also runs `nginx -t` inside the Dockerfile. `load` keeps the image in the
+      # local daemon for the smoke test below; nothing is pushed.
       - name: Build image (no push)
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           push: false
+          load: true
           cache-from: type=gha,scope=runner
           tags: obmen:ci
+
+      # `nginx -t` only proves the syntax. This catches what it cannot: a page or
+      # PDF answering 404, or a location that lost the security headers
+      # (add_header is not inherited once a location declares its own).
+      - name: Smoke test container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name smoke -p 127.0.0.1:8080:8080 obmen:ci
+          trap 'rc=$?; [ "$rc" -eq 0 ] || docker logs smoke || true; docker stop smoke >/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            curl -fsS -o /dev/null http://127.0.0.1:8080/ && break
+            sleep 0.5
+          done
+          fail=0
+          for path in / /index.html /plan.html; do
+            headers=$(curl -fsSI "http://127.0.0.1:8080$path") || { echo "::error::$path is not 200"; fail=1; continue; }
+            for h in Content-Security-Policy X-Content-Type-Options Referrer-Policy; do
+              grep -qi "^$h:" <<<"$headers" || { echo "::error::$path lacks $h"; fail=1; }
+            done
+          done
+          for f in site/files/* site/assets/* site/robots.txt site/sitemap.xml; do
+            path=${f#site}
+            curl -fsS -o /dev/null "http://127.0.0.1:8080$path" || { echo "::error::$path is not 200"; fail=1; }
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/no-such-page)
+          [ "$code" = 404 ] || { echo "::error::unknown path returned $code, expected 404"; fail=1; }
+          exit $fail
 
   deploy:
     name: Build & Push to GHCR
