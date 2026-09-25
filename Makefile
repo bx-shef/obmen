@@ -5,9 +5,15 @@
 # (/home/bitrix/obmen) — the repository itself is not there.
 
 COMPOSE := docker compose -f docker-compose.prod.yml
-# Branch or tag that self-update / compose-update download from.
-REF ?= main
-RAW := https://raw.githubusercontent.com/bx-shef/obmen/$(REF)
+
+# self-update / compose-update always download from main. `override`, not `?=`:
+# a REF taken from the command line is expanded by make itself, before any
+# shell runs, so `make -n self-update REF='$$(shell touch pwned)'` would execute
+# code even in "show only" mode, and `REF=../../other/repo/main` would fetch
+# another repository's file (curl collapses `/../` before sending). Same fix as
+# in client-bank-alfa-by. To try a branch, download from it by hand with curl.
+override REF := main
+override RAW := https://raw.githubusercontent.com/bx-shef/obmen/$(REF)
 
 # ─── Local ───────────────────────────────────────────────────────────
 
@@ -32,6 +38,9 @@ prod-pull:
 	$(COMPOSE) pull
 
 ## Update right now, without waiting for Watchtower
+#
+# `image prune` removes only dangling (untagged, unused) images — the previous
+# obmen image after the pull, and leftovers of other projects on the host.
 prod-redeploy:
 	$(COMPOSE) pull && \
 	$(COMPOSE) up -d && \
@@ -46,23 +55,36 @@ ps:
 	$(COMPOSE) ps
 
 # Both update targets download to a mktemp file first, never `curl | sh`: a
-# download cut short must not leave a half-written file in place.
+# download cut short must not leave a half-written file in place. Neither
+# restarts anything: after compose-update, run `make prod-up` yourself.
 
-## Update this Makefile from the repository (REF=main by default)
+## Update this Makefile from main: shows the diff, CONFIRM=1 applies
 #
-# The download is checked with a marker every version has (.PHONY and the
-# prod-redeploy target), so an older Makefile can always update itself.
+#   make self-update              # show what would change
+#   make self-update CONFIRM=1    # replace the Makefile (a backup is kept)
+#
+# Two steps, like compose-update: the new file runs on the server with the next
+# make command, so look at it first. The download must also look like a
+# Makefile of any version (.PHONY and a prod-redeploy target), so an error page
+# or a truncated file is never installed. Checked with grep, never by running
+# make on it: make expands $$(shell …) while reading a file, even with -n, so
+# that would execute the download before anyone saw the diff.
 self-update:
 	@t=$$(mktemp /tmp/Makefile.XXXXXX) && trap 'rm -f "$$t"' EXIT \
 	  && curl -fsSL -o "$$t" "$(RAW)/Makefile" \
 	  && grep -q '^\.PHONY:' "$$t" \
-	  && make -n -f "$$t" prod-redeploy >/dev/null 2>&1 \
-	  && { b="./Makefile.bak-$$(date +%Y%m%d-%H%M%S)"; \
-	       cp ./Makefile "$$b" && cp "$$t" ./Makefile \
-	       && echo "[make] Makefile updated from $(REF), previous copy: $$b"; \
-	       make help; }
+	  && grep -q '^prod-redeploy:' "$$t" \
+	  && { if diff -u ./Makefile "$$t" >/dev/null; then \
+	         echo "[make] Makefile already matches $(REF)"; exit 0; fi; \
+	       echo "[make] differences from $(REF) (- server, + repository):"; \
+	       diff -u ./Makefile "$$t" | tail -n +3; \
+	       if [ "$${CONFIRM:-}" = "1" ]; then \
+	         b="./Makefile.bak-$$(date +%Y%m%d-%H%M%S)"; \
+	         cp ./Makefile "$$b" && cp "$$t" ./Makefile \
+	         && echo "[make] replaced, previous copy: $$b. Targets: make help"; \
+	       else echo "[make] preview only. Apply: make self-update CONFIRM=1"; fi; }
 
-## Update docker-compose.prod.yml from the repository: shows the diff, CONFIRM=1 applies
+## Update docker-compose.prod.yml from main: shows the diff, CONFIRM=1 applies
 #
 #   make compose-update              # show what would change
 #   make compose-update CONFIRM=1    # replace the file (a backup is kept)
@@ -73,7 +95,12 @@ compose-update:
 	@t=$$(mktemp /tmp/compose.XXXXXX) && trap 'rm -f "$$t"' EXIT \
 	  && curl -fsSL -o "$$t" "$(RAW)/docker-compose.prod.yml" \
 	  && docker compose --project-directory . -f "$$t" config -q \
-	  && { if diff -u ./docker-compose.prod.yml "$$t" >/dev/null; then \
+	  && { if [ ! -f ./docker-compose.prod.yml ]; then \
+	         if [ "$${CONFIRM:-}" = "1" ]; then cp "$$t" ./docker-compose.prod.yml \
+	           && echo "[make] docker-compose.prod.yml created from $(REF). Apply: make prod-up"; \
+	         else echo "[make] no docker-compose.prod.yml here yet. Create it: make compose-update CONFIRM=1"; fi; \
+	         exit 0; fi; \
+	       if diff -u ./docker-compose.prod.yml "$$t" >/dev/null; then \
 	         echo "[make] docker-compose.prod.yml already matches $(REF)"; exit 0; fi; \
 	       echo "[make] differences from $(REF) (- server, + repository):"; \
 	       diff -u ./docker-compose.prod.yml "$$t" | tail -n +3; \

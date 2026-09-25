@@ -83,7 +83,7 @@ obmen → versions). Pin one via `.env` and recreate the container:
 
 ```bash
 echo 'IMAGE_TAG=sha-abc1234' >> .env
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d    # or: make prod-up
 ```
 
 Watchtower keeps watching the pinned tag, which never changes, so the site stays
@@ -97,18 +97,19 @@ the repository, run `make compose-update` (see below).
 
 The `Makefile` wraps the commands above; it lives next to
 `docker-compose.prod.yml` and `.env`. On a server set up before it existed,
-fetch it once with the `curl … /Makefile` line above. `make help` lists:
+fetch it once with the `curl … /Makefile` line above. The server targets
+(`make help` also shows `build-local`, for a local preview):
 
 | Target | What it does |
 |---|---|
 | `make ps` / `make logs` | container state (look for `healthy`) / follow the log |
 | `make prod-redeploy` | pull and restart now, without waiting ~5 min for Watchtower |
 | `make prod-up` / `prod-down` / `prod-pull` | start or update / stop / only download the image |
-| `make compose-update` | show the diff to the repository's `docker-compose.prod.yml`; `CONFIRM=1` replaces it (backup kept), then `make prod-up` |
-| `make self-update` | replace the Makefile with the repository version (backup kept) |
+| `make compose-update` | show the diff to `docker-compose.prod.yml` on `main`; `CONFIRM=1` replaces the file (backup kept) — then run `make prod-up` yourself to apply it |
+| `make self-update` | show the diff to the Makefile on `main`; `CONFIRM=1` replaces it (backup kept) |
 
-`REF=<branch or tag>` makes the two update targets download from somewhere
-other than `main`.
+Both update targets always download from `main`; the ref cannot be changed
+from the command line (see the comment in the Makefile for why).
 
 ## Updating content
 
