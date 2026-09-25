@@ -5,3 +5,4 @@ docker-compose*.yml
 .env
 .env.*
 .DS_Store
+print

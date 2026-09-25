@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>План работ для 1С-программиста — обмен через RabbitMQ</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+@page{size:A4;margin:16mm 0}
+@page:first{margin-top:0}
+:root{--ink:#0E1726;--ink2:#2B3547;--mute:#6B7486;--line:#E4E1DA;--soft:#F6F4EF;
+--or:#F26B1D;--or-soft:#FDEEE3;--teal:#127C7A;--teal-soft:#E2F2F0;--yel-soft:#FCF4D6;--red:#C8402F;--red-soft:#FAE5E1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;color:var(--ink2);font-size:10.4pt;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{padding:0 18mm}
+h1,h2,h3{font-family:Manrope,sans-serif;color:var(--ink);letter-spacing:-.015em}
+code{font-family:JB,monospace;font-size:.86em;background:#EFEDE7;border-radius:4px;padding:1px 5px;color:var(--ink)}
+b,strong{color:var(--ink);font-weight:650}
+
+/* hero */
+.hero{background:var(--ink);color:#fff;padding:20mm 18mm 13mm;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-60mm;top:-70mm;width:150mm;height:150mm;border-radius:50%;background:radial-gradient(circle,rgba(242,107,29,.45),rgba(242,107,29,0) 65%)}
+.hero .tag{font:600 8.5pt Inter;letter-spacing:.16em;text-transform:uppercase;color:#F7A774;position:relative}
+.hero h1{color:#fff;font-size:30pt;line-height:1.08;margin-top:5mm;position:relative}
+.hero h1 span{color:var(--or)}
+.hero p{margin-top:5mm;color:#B7C0CE;font-size:11pt;max-width:150mm;position:relative}
+.purpose{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin-top:8mm;position:relative}
+.purpose div{border:1px solid rgba(255,255,255,.16);border-radius:3mm;padding:3mm 3.5mm;background:rgba(255,255,255,.04)}
+.purpose small{display:block;font:600 7.5pt Inter;letter-spacing:.12em;text-transform:uppercase;color:#8E98AA}
+.purpose b{color:#fff;font:700 10.5pt Manrope}
+
+.resp{margin:7mm 0 0;display:flex;gap:4mm;align-items:stretch}
+.resp div{flex:1;border-radius:3mm;padding:3.5mm 4.5mm;font-size:9.6pt}
+.resp .a{background:var(--yel-soft);border:1px solid #EED889}
+.resp .b{background:var(--teal-soft);border:1px solid #A9D8D3}
+.resp small{display:block;font:700 7.5pt Inter;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1mm}
+.resp .a small{color:#8A6A00}.resp .b small{color:var(--teal)}
+
+.toc{margin-top:6mm;display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 8mm;padding:4.5mm 5mm;background:var(--soft);border-radius:3mm}
+.toc div{display:flex;gap:3mm;font-size:9.6pt}
+.toc i{font-style:normal;font:700 9pt JB;color:var(--or);width:5mm}
+
+/* sections */
+section{margin-top:7mm}
+section.pb{margin-top:0;padding-top:2mm}
+
+.pb>.sh{margin-top:0}
+.sh{display:flex;align-items:center;gap:3.5mm;padding-bottom:2mm;border-bottom:2px solid var(--ink);margin-bottom:3.5mm;break-after:avoid}
+.sh .n{flex:none;width:9mm;height:9mm;border-radius:2.3mm;background:var(--ink);color:#fff;display:grid;place-items:center;font:800 12pt Manrope}
+.sh h2{font-size:16pt}
+.sh .hint{margin-left:auto;font:600 7.5pt Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+
+ul.dots{list-style:none}
+ul.dots li{position:relative;padding-left:5mm;margin:1.6mm 0}
+ul.dots li:before{content:"";position:absolute;left:0;top:2.3mm;width:1.8mm;height:1.8mm;border-radius:50%;background:var(--or)}
+
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:3mm;overflow:hidden;font-size:9.2pt;line-height:1.45}
+th{background:var(--soft);text-align:left;font:700 7.5pt Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);padding:2.6mm 3.5mm}
+td{padding:2.2mm 3.5mm;border-top:1px solid var(--line);vertical-align:top}
+tr{break-inside:avoid}
+td.num{font:700 9pt JB;color:var(--or);white-space:nowrap;width:10mm}
+td.q code{white-space:nowrap}
+
+.callout{margin-top:3mm;border-radius:3mm;padding:3mm 4mm;display:flex;gap:3.5mm;font-size:9.6pt;break-inside:avoid}
+.callout .ic{flex:none;width:6mm;height:6mm;border-radius:50%;display:grid;place-items:center;font:800 9pt Manrope;color:#fff}
+.callout.info{background:var(--teal-soft)}.callout.info .ic{background:var(--teal)}
+.callout.acc{background:var(--or-soft)}.callout.acc .ic{background:var(--or)}
+
+.decide{counter-reset:d;display:grid;grid-template-columns:1fr 1fr;gap:2.5mm}
+.decide .d{display:grid;grid-template-columns:8mm 1fr;gap:2mm;padding:2.4mm 3mm;border:1px solid var(--line);border-radius:3mm;break-inside:avoid}
+.decide .d:before{counter-increment:d;content:counter(d);width:7mm;height:7mm;border-radius:50%;background:var(--or-soft);color:#B24A0D;display:grid;place-items:center;font:800 10pt Manrope}
+.decide h4{font:700 10.5pt Manrope;color:var(--ink)}
+.decide p{font-size:9.2pt;line-height:1.45;margin-top:.6mm}
+
+.core{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.core .c{border:1px solid var(--line);border-radius:3mm;padding:3.5mm 4mm;break-inside:avoid}
+.core .c.w{grid-column:1/-1}
+.core .c h4{font:700 10.5pt Manrope;color:var(--ink);display:flex;gap:2.5mm;align-items:center}
+.core .c h4 i{font-style:normal;font:700 8.5pt JB;color:#fff;background:var(--ink);border-radius:1.5mm;padding:.6mm 1.8mm}
+.core .c p{font-size:9.6pt;margin-top:1mm}
+.core .c.key{background:var(--yel-soft);border-color:#EED889}
+
+.check{list-style:none;display:grid;gap:2mm}
+.check li{display:grid;grid-template-columns:6.5mm 1fr;gap:2.5mm;padding:2.8mm 3.5mm;border:1px solid var(--line);border-radius:2.5mm;break-inside:avoid}
+.check li:before{content:"";width:4.6mm;height:4.6mm;border:1.6px solid var(--ink);border-radius:1.2mm;margin-top:.5mm}
+.check .sub{display:block;margin-top:1mm;font-size:9pt;color:var(--mute)}
+
+.flags{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm}
+.flags div{background:var(--red-soft);border-left:3px solid var(--red);border-radius:0 2.5mm 2.5mm 0;padding:3mm 4mm;font-size:9.6pt;break-inside:avoid}
+.flags div:before{content:"⚠ ";color:var(--red);font-weight:700}
+.pb{break-before:page}
+.end{margin:10mm 0 0;text-align:center;font:500 8.5pt Inter;color:var(--mute)}
+</style>
+<style>
+/* ===== B/W print overrides ===== */
+:root{--ink:#000;--ink2:#1a1a1a;--mute:#555;--line:#9a9a9a;--soft:#fff;
+--or:#000;--or-soft:#fff;--teal:#000;--teal-soft:#fff;--yel-soft:#fff;--red:#000;--red-soft:#fff}
+body{color:#1a1a1a}
+code{background:#fff;border:1px solid #bbb}
+.hero{background:#fff;color:#000;border-bottom:3px solid #000;padding-top:18mm}
+.hero:after{display:none}
+.hero .tag{color:#000}
+.hero h1{color:#000}.hero h1 span{color:#000;text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:6px}
+.hero p{color:#222}
+.purpose div{border:1.5px solid #000;background:#fff}
+.purpose small{color:#555}.purpose b{color:#000}
+.resp .a{background:#fff;border:1.5px solid #000}
+.resp .b{background:#fff;border:1.5px dashed #000}
+.resp .a small,.resp .b small{color:#000}
+.toc{background:#fff;border:1px solid #999}
+.toc i{color:#000}
+.sh .n{background:#000;color:#fff}
+ul.dots li:before{background:#000}
+th{background:#fff;color:#000;border-bottom:1.5px solid #000}
+td{border-top:1px solid #aaa}
+td.num{color:#000}
+table{border:1.2px solid #777}
+.callout{background:#fff!important;border:1.5px solid #000}
+.callout.acc{border-width:2.5px}
+.callout .ic{background:#000!important;color:#fff}
+.decide .d{border:1.2px solid #777}
+.decide .d:before{background:#fff;color:#000;border:1.5px solid #000}
+.core .c{border:1.2px solid #777}
+.core .c.key{background:#fff;border:2.5px solid #000}
+.check li{border:1.2px solid #777}
+.check .sub{color:#444}
+.flags div{background:#fff;border:1px solid #999;border-left:4px solid #000}
+.flags div:before{color:#000}
+</style>
+</head><body>
+
+<div class="hero">
+  <div class="tag">Обмен 1С ↔ сайт · RabbitMQ</div>
+  <h1>План работ<br>для <span>1С-программиста</span></h1>
+  <p>По этому плану заказчик контролирует подрядчика — видит, какие пакеты и модули он ставит, что пишет, что решает и как проверить, что всё работает.</p>
+  <div class="purpose">
+    <div><small>Ставит</small><b>пакеты и модули</b></div>
+    <div><small>Решает</small><b>контракт и ключи</b></div>
+    <div><small>Пишет</small><b>outbox и публикатор</b></div>
+    <div><small>Сдаёт</small><b>по чек-листу</b></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="resp">
+    <div class="a"><small>Зона подрядчика</small>Вся сторона 1С — он пишет и контролирует обмен целиком.</div>
+    <div class="b"><small>Зона сайта</small>Сайт предоставляет очереди и разбирает сообщения.</div>
+  </div>
+
+  <div class="toc">
+    <div><i>0</i>Что подрядчик получает на входе</div>
+    <div><i>4</i>Карта очередей</div>
+    <div><i>1</i>Что и как поставить</div>
+    <div><i>5</i>Чек-лист приёмки</div>
+    <div><i>2</i>Что решить до кода</div>
+    <div><i>6</i>Что должно насторожить</div>
+    <div><i>3</i>Что написать на стороне 1С</div>
+    <div></div>
+  </div>
+
+  <!-- 0 -->
+  <section>
+    <div class="sh"><span class="n">0</span><h2>Что подрядчик получает на входе</h2></div>
+    <ul class="dots">
+      <li><b>Параметры подключения к брокеру:</b> host, порт <code>5672</code>, vhost, логин/пароль, формат JSON — передаются отдельно, не в этом документе.</li>
+      <li><b>Контракт сообщений</b> по каждой сущности: состав полей, версия, ключ идемпотентности.</li>
+      <li><b>Список очередей</b> и их назначение (см. §4).</li>
+      <li><b>Доступ его IP к порту <code>5672</code></b> — открывается по allowlist на стороне сервера.</li>
+    </ul>
+  </section>
+
+  <!-- 1 -->
+  <section>
+    <div class="sh"><span class="n">1</span><h2>Что и как поставить</h2><span class="hint">+ как проверить</span></div>
+    <table><thead>
+      <tr><th>Шаг</th><th style="width:40%">Что</th><th>Как проверить (заказчику)</th></tr></thead><tbody>
+      <tr><td class="num">1.1</td><td><b>Внешняя компонента PinkRabbitMQ</b> (BiteRP, Native API, AMQP 0.9.1).<br>Репозиторий: <code>github.com/BITERP/PinkRabbitMQ</code></td><td>Компонента загружена в конфигурацию как макет с двоичными данными (Windows x86/x64 и/или Linux x64 — под разрядность сервера 1С)</td></tr>
+      <tr><td class="num">1.2</td><td>Размещение компоненты <b>на серверах приложений 1С</b> (не на клиенте)</td><td>Подрядчик показывает, где лежит и как подключается (<code>ПодключитьВнешнююКомпоненту</code>)</td></tr>
+      <tr><td class="num">1.3</td><td>Проверка разрядности</td><td>Версия so/dll совпадает с разрядностью платформы. Спросить: «что будет после обновления платформы 1С?» — правильный ответ: повторная проверка компоненты в регламенте обновления</td></tr>
+      <tr><td class="num">1.4</td><td>Реквизиты подключения — <b>в константах / параметрах сеанса</b>, не в коде</td><td>Открыть модуль: логина, пароля, хоста в тексте кода быть не должно</td></tr>
+    </tbody></table>
+    <div class="callout info"><span class="ic">i</span><div>Компонента — это <b>только транспорт</b> (<code>Connect</code>, <code>DeclareQueue</code>, <code>BasicPublish</code>, <code>BasicConsume</code>, <code>BasicAck</code>, <code>BasicReject</code>, <code>GetLastError</code> и т.п.). Вся логика обмена — код подрядчика поверх неё.</div></div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <div class="sh"><span class="n">2</span><h2>Что решить до кода</h2><span class="hint">ответ — письменно</span></div>
+    <p style="margin-bottom:2.5mm">На эти вопросы подрядчик обязан ответить письменно — по ним потом принимается работа.</p>
+    <div class="decide">
+      <div class="d"><div><h4>Контракт по каждой сущности</h4><p>Состав полей, тип, обязательность. Фиксируется и не меняется молча.</p></div></div>
+      <div class="d"><div><h4>Версия точки обмена в имени</h4><p>Например <code>import.deal.main.v1</code>. Смена формата = новая версия (<code>.v2</code>), а не тихая правка старой.</p></div></div>
+      <div class="d"><div><h4>Ключ идемпотентности в каждом сообщении</h4><p>По нему приёмник отбивает повтор и переупорядочивание. Что берём ключом (id объекта + время изменения) — решает подрядчик, фиксирует в контракте.</p></div></div>
+      <div class="d"><div><h4>Что публикуем событийно, а что по расписанию</h4><p>И с какой периодичностью работает регламентное задание.</p></div></div>
+      <div class="d"><div><h4>Сценарий полной перезаливки</h4><p>Как выгрузить всё заново, когда стороны разошлись (очередь этого не решает). Отдельный механизм.</p></div></div>
+      <div class="d"><div><h4>Кто администрирует брокер и получает оповещения</h4><p>По глубине очереди и dead-letter.</p></div></div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <div class="sh"><span class="n">3</span><h2>Что написать на стороне 1С</h2></div>
+    <div class="callout acc" style="margin:0 0 4mm"><span class="ic">!</span><div><b>Про объём.</b> Код — типовой: план обмена, регламентное задание-публикатор, сборка сообщения. Пишется быстро, в том числе с ИИ-агентом, и объём тут не аргумент против брокера. Контролировать нужно не количество строк, а <b>решения из §2</b> — контракт, ключ идемпотентности и снятие регистрации только после ack. Ошибка будет именно там, а не в обвязке.</div></div>
+    <p style="margin-bottom:3.5mm">Ядро — механизм гарантированной публикации. В терминах 1С объясняется за минуту: <b>outbox = план обмена</b>.</p>
+    <div class="core">
+      <div class="c"><h4><i>1</i>План обмена (outbox)</h4><p>На каждую выгружаемую сущность — регистрация изменений. Записал документ/справочник → изменение зарегистрировалось.</p></div>
+      <div class="c key"><h4><i>2</i>Регламентное задание — публикатор</h4><p>Читает зарегистрированные изменения, формирует JSON по контракту, публикует в <code>import.&lt;entity&gt;.main.v1</code>. <b>Регистрацию снимает только после ack</b> от брокера. Упал до публикации — изменение уедет в следующий проход.</p></div>
+      <div class="c"><h4><i>3</i>Формирование сообщения</h4><p>Тело по контракту + заголовки: время сообщения, ключ идемпотентности, версия.</p></div>
+      <div class="c"><h4><i>4</i>Обработка ошибок публикации</h4><p>Брокер недоступен → не терять регистрацию, повторить в следующий проход. Самодельный бесконечный повтор не писать — повторы разбора на стороне приёмника даёт брокер.</p></div>
+      <div class="c"><h4><i>5</i>Входящее — только если нужно</h4><p>HTTP-сервис конфигурации. Слушатель очереди внутри 1С не делаем — 1С плохой потребитель.</p></div>
+      <div class="c"><h4><i>6</i>Инструменты диагностики</h4><p>Обязательны, без них брокер — чёрный ящик: посмотреть, <b>что не ушло</b> (осталось в плане обмена), и <b>опубликовать повторно вручную</b> конкретный объект.</p></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="pb">
+    <div class="sh"><span class="n">4</span><h2>Карта очередей</h2><span class="hint">типовые сущности Битрикс24</span></div>
+    <p style="margin-bottom:3.5mm">Приёмник на стороне Битрикс24 разбирает эти очереди. Подрядчик публикует в <code>*.main.v1</code>; <code>delayedFirst</code> и <code>failed</code> — служебные, их трогать не нужно. Таблица идёт в порядке зависимостей: сначала справочники, потом документы, которые на них ссылаются.</p>
+    <table><thead>
+      <tr><th style="width:5%">#</th><th style="width:31%">Очередь (main)</th><th style="width:15%">Сущность 1С</th><th>Что публикует 1С → куда в Битрикс24</th></tr></thead><tbody>
+      <tr><td class="num">1</td><td class="q"><code>import.counterparty.main.v1</code></td><td><b>Контрагенты</b></td><td>Юрлица и ИП с реквизитами (УНП/ИНН, адреса, банковские счета), контактные лица → CRM: компания + реквизиты, контакты</td></tr>
+      <tr><td class="num">2</td><td class="q"><code>import.product.main.v1</code></td><td><b>Номенклатура</b></td><td>Карточка: наименование, артикул, единица измерения, ставка НДС, группа, цена → каталог товаров CRM</td></tr>
+      <tr><td class="num">3</td><td class="q"><code>import.contract.main.v1</code></td><td><b>Договоры</b></td><td>Номер, дата, вид, срок действия, валюта, статус; ссылка на контрагента → CRM-сущность «Договор», привязанная к компании</td></tr>
+      <tr><td class="num">4</td><td class="q"><code>import.deal.main.v1</code></td><td><b>Сделки</b></td><td>Сумма, валюта, стадия, ответственный, товарные позиции (номенклатура, количество, цена, скидка); ссылки на контрагента и договор → CRM: сделка с товарами</td></tr>
+    </tbody></table>
+    <div class="callout info"><span class="ic">i</span><div><b>Связи — только по GUID 1С.</b> Сделка ссылается на контрагента, договор и номенклатуру их идентификаторами из 1С, а не ID Битрикс24: сопоставление делает приёмник. Если сделка пришла раньше контрагента, сообщение уходит в <code>delayedFirst</code> и повторяется, пока ссылка не появится. Новую сущность вводит новая очередь + согласование контракта.</div></div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <div class="sh"><span class="n">5</span><h2>Чек-лист приёмки</h2><span class="hint">до того, как обмен принят</span></div>
+    <ul class="check">
+      <li><span>Контракт сообщений согласован письменно: поля, версия, ключ идемпотентности.</span></li>
+      <li><span>Компонента стоит на серверах приложений, разрядность верная, реквизиты в константах (не в коде).</span></li>
+      <li><span>Публикация идёт через план обмена; регистрация снимается <b>только после ack</b>.<span class="sub">Проверка: остановить приёмник → выгрузить → сообщения копятся в очереди, ничего не потеряно → поднять приёмник → всё разобралось.</span></span></li>
+      <li><span>Пиковая выгрузка (массовая переоценка/пересчёт) не блокирует сеанс 1С: публикация — миллисекунды, задание отрабатывает быстро.</span></li>
+      <li><span>У 1С-специалиста есть два инструмента: «что не ушло» и «опубликовать повторно».</span></li>
+      <li><span>Настроены dead-letter и политика хранения; назначен администратор брокера; есть оповещение по глубине очереди.</span></li>
+      <li><span>Ограничен рост логов и очередей по диску (типовой отказ здесь — дисковый).</span></li>
+      <li><span>Проверена работа компоненты <b>после планового обновления платформы 1С</b>.</span></li>
+      <li><span>Описан сценарий полной перезаливки (когда очередь не спасает).</span></li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <div class="sh"><span class="n">6</span><h2>Что должно насторожить заказчика</h2></div>
+    <div class="flags">
+      <div>Логин / пароль / хост брокера в тексте кода.</div>
+      <div>Самодельный механизм повторов в 1С (счётчик попыток, своя очередь неотправленного) — план обмена/ack не использован.</div>
+      <div>Долгоживущее фоновое задание-слушатель очереди в 1С (займёт лицензию, будет рваться).</div>
+      <div>Публикация сообщения внутри транзакции записи документа.</div>
+      <div>Имя очереди без версии: <code>import.deal</code> вместо <code>import.deal.main.v1</code>.</div>
+      <div>Нет ответа на вопросы «что после обновления платформы» и «как перезалить всё заново».</div>
+    </div>
+  </section>
+</div>
+</body></html>

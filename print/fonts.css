@@ -1,0 +1,14 @@
+/* Static instances of variable OFL fonts (see fonts/OFL-*.txt).
+ * Static, not variable: Chromium embeds variable fonts as Type 3 glyphs, which
+ * printer drivers rasterise; static TrueType prints as vector text. */
+@font-face{font-family:"Inter";src:url("fonts/Inter-400.ttf");font-weight:400;}
+@font-face{font-family:"Inter";src:url("fonts/Inter-500.ttf");font-weight:500;}
+@font-face{font-family:"Inter";src:url("fonts/Inter-600.ttf");font-weight:600;}
+@font-face{font-family:"Inter";src:url("fonts/Inter-700.ttf");font-weight:700;}
+@font-face{font-family:"Inter";src:url("fonts/Inter-800.ttf");font-weight:800;}
+@font-face{font-family:"Manrope";src:url("fonts/Manrope-600.ttf");font-weight:600;}
+@font-face{font-family:"Manrope";src:url("fonts/Manrope-700.ttf");font-weight:700;}
+@font-face{font-family:"Manrope";src:url("fonts/Manrope-800.ttf");font-weight:800;}
+@font-face{font-family:"JB";src:url("fonts/JBMono-500.ttf");font-weight:500;}
+@font-face{font-family:"JB";src:url("fonts/JBMono-600.ttf");font-weight:600;}
+@font-face{font-family:"JB";src:url("fonts/JBMono-700.ttf");font-weight:700;}

@@ -1,0 +1,2 @@
+# Pinned: each Playwright release bundles its own Chromium (1.56 → Chromium 141).
+playwright==1.56.0
