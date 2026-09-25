@@ -107,7 +107,7 @@ The PDFs come from **separate print sources**, not from the web pages:
 
 ⚠ The text exists twice — in `site/*.html` and in `print/*.html`. A content
 change must be made in both. The OG cards carry short standalone titles: update
-`print/og.html` when a page title changes. Messengers cache previews, so a
+`print/og.html` when a page title or description changes. Messengers cache previews, so a
 changed card may show up only after the cache expires (or via the Facebook
 Sharing Debugger / Telegram @WebpageBot). File names are fixed in `print/render.py`; keep
 them, the pages link to them.

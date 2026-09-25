@@ -131,16 +131,24 @@ jobs:
           # Open Graph cards, also rendered at build time. og:image must be an
           # absolute URL on the canonical domain; fetch its path from this image.
           for page in site/*.html; do
-            url=$(grep -oE '<meta property="og:image" content="[^"]+"' "$page" | sed -E 's/.*content="//; s/"$//' || true)
-            case "$url" in
-              https://obmen.bx-shef.by/*) ;;
-              *) echo "::error file=$page::og:image missing or not on https://obmen.bx-shef.by/: '$url'"; fail=1; continue ;;
-            esac
-            path=/${url#https://obmen.bx-shef.by/}
-            type=$(curl -fsS -o "pdf/${path##*/}" -w '%{content_type}' "http://127.0.0.1:8080$path") \
+            urls=$(grep -oE '<meta property="og:image" content="[^"]+"' "$page" | sed -E 's/.*content="//; s/"$//' || true)
+            if [ "$(printf '%s' "$urls" | grep -c .)" != 1 ]; then
+              echo "::error file=$page::expected exactly one og:image, found: '$urls'"; fail=1; continue
+            fi
+            path=/${urls#https://obmen.bx-shef.by/}
+            # Also rejects another domain (the prefix is not stripped then) and ../
+            if ! [[ "$path" =~ ^/files/[A-Za-z0-9_-]+\.png$ ]]; then
+              echo "::error file=$page::og:image must be https://obmen.bx-shef.by/files/<name>.png: '$urls'"; fail=1; continue
+            fi
+            file=pdf/${path##*/}
+            type=$(curl -fsS -o "$file" -w '%{content_type}' "http://127.0.0.1:8080$path") \
               || { echo "::error::$path is not 200"; fail=1; continue; }
             [ "$type" = image/png ] || { echo "::error::$path is $type, expected image/png"; fail=1; }
-            size=$(python3 -c 'import struct,sys; print("%dx%d" % struct.unpack(">II", open(sys.argv[1], "rb").read(24)[16:24]))' "pdf/${path##*/}")
+            size=$(python3 -c 'import struct,sys
+          d = open(sys.argv[1], "rb").read(24)
+          assert d[:8] == b"\x89PNG\r\n\x1a\n" and len(d) == 24
+          print("%dx%d" % struct.unpack(">II", d[16:24]))' "$file" 2>/dev/null) \
+              || { echo "::error::$path is not a valid PNG"; fail=1; continue; }
             [ "$size" = 1200x630 ] || { echo "::error::$path is $size, expected 1200x630"; fail=1; }
           done
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/no-such-page)
