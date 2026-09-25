@@ -9,6 +9,8 @@ engineer, a work plan for the 1C contractor, and both as print-ready PDFs.
 - `site/plan.html` — work plan with an interactive acceptance checklist
 - `/files/*.pdf` — A4, optimised for black-and-white printing; rendered from
   `print/` during the Docker build, not stored in git
+- `/files/og.png`, `/files/og-plan.png` — Open Graph share cards (1200×630) for
+  the two pages, rendered from `print/og.html` the same way
 
 Same delivery scheme as [`client-bank-alfa-by`](https://github.com/bx-shef/client-bank-alfa-by):
 **GHCR + Watchtower behind the shared nginx-proxy** (TLS via Let's Encrypt).
@@ -23,7 +25,7 @@ docker compose up --build      # http://localhost:8082
 
 | Trigger | Runs |
 |---|---|
-| Pull request → `main` | `ci`: local link check, image build (PDFs rendered from `print/`, `nginx -t`), container smoke test (200s, security headers, PDFs), no push |
+| Pull request → `main` | `ci`: local link check, image build (PDFs and OG cards rendered from `print/`, `nginx -t`), container smoke test (200s, security headers, PDFs, `og:image`), no push |
 | Push to `main` | `ci` → `deploy`: push `ghcr.io/bx-shef/obmen:latest` and `:sha-<short>` |
 | Manual run (`workflow_dispatch`) | same as push; `deploy` runs only when started on `main` |
 
@@ -101,9 +103,13 @@ The PDFs come from **separate print sources**, not from the web pages:
 |---|---|---|
 | `/files/1c-rabbitmq-presentation.pdf` | `print/presentation.html` | A4 landscape, 5 slides |
 | `/files/1c-rabbitmq-plan.pdf` | `print/plan.html` | A4 portrait, page numbers in footer |
+| `/files/og.png`, `/files/og-plan.png` | `print/og.html` (`#plan` for the plan card) | 1200×630 PNG, `og:image` of `index.html` / `plan.html` |
 
 ⚠ The text exists twice — in `site/*.html` and in `print/*.html`. A content
-change must be made in both. File names are fixed in `print/render.py`; keep
+change must be made in both. The OG cards carry short standalone titles: update
+`print/og.html` when a page title changes. Messengers cache previews, so a
+changed card may show up only after the cache expires (or via the Facebook
+Sharing Debugger / Telegram @WebpageBot). File names are fixed in `print/render.py`; keep
 them, the pages link to them.
 
 How the PDFs are built: the first `Dockerfile` stage runs `print/render.py` on

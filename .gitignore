@@ -2,3 +2,4 @@
 .DS_Store
 # Rendered from print/ during the Docker build.
 site/files/*.pdf
+site/files/og*.png

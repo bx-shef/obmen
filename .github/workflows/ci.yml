@@ -118,7 +118,7 @@ jobs:
           # comes from the pages' links, so a new or mistyped PDF link is caught
           # here (the link check skips files/*.pdf). Saved for the artifact below.
           mkdir -p pdf
-          pdfs=$(grep -ohE "(href|src)=[\"']files/[^\"'?#]+\.pdf" site/*.html | sed -E "s/^(href|src)=[\"']//" | sort -u)
+          pdfs=$(grep -ohE "(href|src)=[\"']files/[^\"'?#]+\.pdf" site/*.html | sed -E "s/^(href|src)=[\"']//" | sort -u || true)
           [ -n "$pdfs" ] || { echo "::error::no PDF links found in site/*.html"; fail=1; }
           for ref in $pdfs; do
             path=/$ref
@@ -128,17 +128,34 @@ jobs:
             head -c 5 "pdf/${ref##*/}" | grep -q '^%PDF-' || { echo "::error::$path is not a PDF file"; fail=1; }
             [ "$(stat -c %s "pdf/${ref##*/}")" -gt 10000 ] || { echo "::error::$path is suspiciously small"; fail=1; }
           done
+          # Open Graph cards, also rendered at build time. og:image must be an
+          # absolute URL on the canonical domain; fetch its path from this image.
+          for page in site/*.html; do
+            url=$(grep -oE '<meta property="og:image" content="[^"]+"' "$page" | sed -E 's/.*content="//; s/"$//' || true)
+            case "$url" in
+              https://obmen.bx-shef.by/*) ;;
+              *) echo "::error file=$page::og:image missing or not on https://obmen.bx-shef.by/: '$url'"; fail=1; continue ;;
+            esac
+            path=/${url#https://obmen.bx-shef.by/}
+            type=$(curl -fsS -o "pdf/${path##*/}" -w '%{content_type}' "http://127.0.0.1:8080$path") \
+              || { echo "::error::$path is not 200"; fail=1; continue; }
+            [ "$type" = image/png ] || { echo "::error::$path is $type, expected image/png"; fail=1; }
+            size=$(python3 -c 'import struct,sys; print("%dx%d" % struct.unpack(">II", open(sys.argv[1], "rb").read(24)[16:24]))' "pdf/${path##*/}")
+            [ "$size" = 1200x630 ] || { echo "::error::$path is $size, expected 1200x630"; fail=1; }
+          done
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/no-such-page)
           [ "$code" = 404 ] || { echo "::error::unknown path returned $code, expected 404"; fail=1; }
           exit $fail
 
-      # The PDFs are build output and no longer show up in the PR diff:
-      # download them from the run's artifacts to review the rendered result.
-      - name: Upload rendered PDFs
+      # The PDFs and OG cards are build output and do not show up in the PR
+      # diff: download them from the run's artifacts to review the result.
+      - name: Upload rendered PDFs and OG cards
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: pdf
-          path: pdf/*.pdf
+          name: rendered
+          path: |
+            pdf/*.pdf
+            pdf/*.png
           if-no-files-found: error
           retention-days: 14
 
