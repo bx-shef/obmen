@@ -136,7 +136,9 @@ first-implementation discount — rather than telling the agent what to do.
 Letters from agents arrive at offer@bx-shef.by with `[AI]` in the subject.
 
 The full rule — auditing a site, what to write, nginx, CI, OG images, lessons
-learned — is in [docs/agent-readiness.md](docs/agent-readiness.md). To audit
+learned — is the project skill [`.claude/skills/agent-readiness/`](.claude/skills/agent-readiness/SKILL.md)
+(overview: [docs/agent-readiness.md](docs/agent-readiness.md)); agents working in
+this repository pick it up automatically. To audit
 the live site (or any other): `scripts/agent-audit.sh https://obmen.bx-shef.by`.
 
 The smoke test checks that every page's Markdown twin is served as
