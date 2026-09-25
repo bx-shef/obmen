@@ -76,6 +76,32 @@ jobs:
                      | sort -u || true)
           exit $fail
 
+      # The Makefile runs on the server, where a broken one is found only when
+      # it is needed. Targets are read from the rules themselves, so one left
+      # out of .PHONY is still checked (and reported).
+      - name: Check Makefile
+        shell: bash
+        run: |
+          set -euo pipefail
+          help=$(make help)
+          echo "$help"
+          phony=" $(sed -n 's/^\.PHONY://p' Makefile) "
+          targets=$(grep -oE '^[A-Za-z0-9_][A-Za-z0-9_.-]*:' Makefile | tr -d : | sort -u)
+          [ -n "$targets" ] || { echo "::error file=Makefile::no targets found"; exit 1; }
+          fail=0
+          for t in $targets; do
+            [[ "$phony" == *" $t "* ]] || { echo "::error file=Makefile::$t is missing from .PHONY"; fail=1; }
+            make -n "$t" >/dev/null || { echo "::error file=Makefile::make -n $t fails"; fail=1; }
+            grep -qE "^  $t " <<<"$help" || { echo "::error file=Makefile::$t has no ## description"; fail=1; }
+          done
+          # REF must not be settable: make expands it before any shell runs,
+          # so an overridable REF executes code even under -n.
+          tmp=$(mktemp -d)
+          make -n self-update compose-update "REF=\$(shell touch $tmp/pwned)" >/dev/null 2>&1 || true
+          [ ! -e "$tmp/pwned" ] || { echo "::error file=Makefile::REF from the command line is expanded — use override"; fail=1; }
+          rm -rf "$tmp"
+          exit $fail
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
