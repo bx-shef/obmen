@@ -135,6 +135,10 @@ files state facts — prices, the address, the `[AI]` subject tag and the 5%
 first-implementation discount — rather than telling the agent what to do.
 Letters from agents arrive at offer@bx-shef.by with `[AI]` in the subject.
 
+The full rule — auditing a site, what to write, nginx, CI, OG images, lessons
+learned — is in [docs/agent-readiness.md](docs/agent-readiness.md). To audit
+the live site (or any other): `scripts/agent-audit.sh https://obmen.bx-shef.by`.
+
 The smoke test checks that every page's Markdown twin is served as
 `text/markdown`, that the negotiation works both ways, and that every link in
 `/llms.txt` resolves.

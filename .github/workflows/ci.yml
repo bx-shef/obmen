@@ -157,6 +157,10 @@ jobs:
           # Open Graph cards, also rendered at build time. og:image must be an
           # absolute URL on the canonical domain; fetch its path from this image.
           for page in site/*.html; do
+            for tag in 'property="og:image:type"' 'property="og:image:width"' 'property="og:image:height"' \
+                       'property="og:image:alt"' 'name="twitter:card"' 'name="twitter:image"'; do
+              grep -q "<meta $tag" "$page" || { echo "::error file=$page::missing <meta $tag>"; fail=1; }
+            done
             urls=$(grep -oE '<meta property="og:image" content="[^"]+"' "$page" | sed -E 's/.*content="//; s/"$//' || true)
             if [ "$(printf '%s' "$urls" | grep -c .)" != 1 ]; then
               echo "::error file=$page::expected exactly one og:image, found: '$urls'"; fail=1; continue
