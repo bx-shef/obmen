@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Обмен 1С ↔ сайт через RabbitMQ — презентация</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+@page{size:1280px 720px;margin:0}
+:root{
+  --ink:#0E1726; --ink2:#2B3547; --mute:#6B7486; --line:#E3E0D8;
+  --paper:#FAF8F3; --card:#FFFFFF;
+  --or:#F26B1D; --or-soft:#FDEBDD; --teal:#127C7A; --teal-soft:#DDF0EE;
+  --yel:#F2B705; --yel-soft:#FCF3D2; --red:#C8402F; --red-soft:#F8E1DD;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#fff}
+body{font-family:Inter,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+.slide{width:1280px;height:720px;position:relative;overflow:hidden;page-break-after:always;background:var(--paper);padding:46px 72px}
+.slide:last-child{page-break-after:auto}
+h1,h2,h3{font-family:Manrope,sans-serif;letter-spacing:-.02em}
+code,.mono{font-family:JB,monospace;font-size:.9em}
+.kicker{display:flex;align-items:center;gap:14px;font:600 13px/1 Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.kicker .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;font:700 14px/1 Manrope;letter-spacing:0}
+.title{font-size:40px;font-weight:800;line-height:1.1;margin:16px 0 0}
+.foot{position:absolute;left:72px;right:72px;bottom:20px;display:flex;justify-content:space-between;font:500 12px Inter;color:#9AA1AE}
+.foot b{color:var(--or);font-weight:700}
+
+/* ---------- cover ---------- */
+.cover{background:var(--ink);color:#fff;padding:0}
+.cover .glow{position:absolute;right:-180px;top:-160px;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,rgba(242,107,29,.42),rgba(242,107,29,0) 65%)}
+.cover .glow2{position:absolute;left:-200px;bottom:-260px;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(18,124,122,.35),rgba(18,124,122,0) 65%)}
+.cover .inner{position:relative;padding:88px 96px;height:100%;display:flex;flex-direction:column}
+.cover .tag{display:inline-flex;gap:10px;align-items:center;font:600 13px Inter;letter-spacing:.14em;text-transform:uppercase;color:#F7A774}
+.cover .tag i{width:36px;height:2px;background:var(--or);display:block}
+.cover h1{font-size:76px;font-weight:800;line-height:1.02;margin-top:30px;letter-spacing:-.035em}
+.cover h1 span{color:var(--or)}
+.cover p.lead{margin-top:28px;font-size:22px;line-height:1.5;color:#B9C1CF;max-width:720px}
+.cover .flow{margin-top:auto;display:flex;align-items:center;gap:18px}
+.pill{padding:14px 22px;border-radius:14px;font:700 18px Manrope;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04)}
+.pill.o{border-color:var(--or);color:#FFB286}
+.arrow{width:64px;height:2px;background:linear-gradient(90deg,rgba(255,255,255,.2),var(--or));position:relative}
+.arrow:after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:9px solid var(--or)}
+.cover .meta{position:absolute;right:96px;bottom:88px;text-align:right;font:500 14px/1.6 Inter;color:#8791A3}
+
+/* ---------- slide 1 ---------- */
+.big-q{margin-top:26px;display:grid;grid-template-columns:1.15fr .85fr;gap:36px}
+.quote{background:var(--ink);color:#fff;border-radius:22px;padding:28px 36px;position:relative}
+.quote .lbl{font:600 12px Inter;letter-spacing:.14em;text-transform:uppercase;color:#F7A774}
+.quote .q{font:800 34px/1.18 Manrope;margin-top:14px;letter-spacing:-.02em}
+.quote .q em{font-style:normal;color:var(--or)}
+.quote .sub{margin-top:18px;color:#AEB7C6;font-size:16px;line-height:1.55}
+.warn{border-radius:18px;background:var(--card);border:1px solid var(--line);padding:26px 28px}
+.warn h3{font-size:18px;display:flex;gap:10px;align-items:center}
+.warn p{margin-top:10px;color:var(--ink2);font-size:15.5px;line-height:1.55}
+.chip{display:inline-block;font:700 11px Inter;letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border-radius:7px}
+.chip.o{background:var(--or-soft);color:#B24A0D}.chip.t{background:var(--teal-soft);color:var(--teal)}.chip.r{background:var(--red-soft);color:var(--red)}.chip.y{background:var(--yel-soft);color:#8A6A00}
+.tri{margin-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tri .c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.tri .c h4{font:700 17px Manrope;margin-top:12px}
+.tri .c p{font-size:14.5px;color:var(--ink2);line-height:1.5;margin-top:6px}
+.bottomline{margin-top:18px;display:flex;align-items:center;gap:16px;padding:16px 22px;border-radius:14px;background:var(--or-soft);border:1px solid #F7C9A8}
+.bottomline b{font:800 15px Manrope;color:#B24A0D;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
+.bottomline span{font-size:17px;font-weight:600}
+
+/* ---------- slide 2 ---------- */
+.arch{margin-top:26px;display:grid;grid-template-columns:1fr 64px 330px 64px 1fr;align-items:stretch}
+.zone{border-radius:18px;padding:20px 22px;position:relative}
+.zone .zl{font:700 12px Inter;letter-spacing:.12em;text-transform:uppercase}
+.zone h4{font:800 20px Manrope;margin-top:6px}
+.z1{background:var(--yel-soft);border:1.5px solid #EED889}
+.z1 .zl{color:#8A6A00}
+.z3{background:var(--teal-soft);border:1.5px solid #A9D8D3}
+.z3 .zl{color:var(--teal)}
+.step{display:flex;gap:10px;margin-top:12px;font-size:14.5px;line-height:1.4;color:var(--ink2)}
+.step i{flex:none;width:22px;height:22px;border-radius:50%;background:#fff;display:grid;place-items:center;font:700 12px Manrope;font-style:normal;color:var(--ink)}
+.zone .note{margin-top:14px;font-size:13px;color:#6E5A12;border-top:1px dashed #E3CC76;padding-top:10px}
+.z3 .note{color:#23605C;border-top-color:#9FCDC8}
+.broker{background:var(--ink);color:#fff;border-radius:18px;padding:18px 18px}
+.broker .zl{font:700 12px Inter;letter-spacing:.12em;text-transform:uppercase;color:#F7A774}
+.broker h4{font:800 20px Manrope;margin-top:6px}
+.qu{margin-top:10px;border-radius:10px;padding:10px 12px;font:600 12px JB;white-space:nowrap;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.qu small{display:block;font:500 12px Inter;color:#9AA3B2;margin-top:3px}
+.qu.m{border-color:var(--or);background:rgba(242,107,29,.14)}
+.qu.f{border-color:#E0705F;background:rgba(200,64,47,.16)}
+.conn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.conn .lab{font:700 11px JB;color:var(--or);letter-spacing:.04em}
+.conn .ln{width:100%;height:2px;background:var(--or);position:relative}
+.conn .ln:after{content:"";position:absolute;right:-1px;top:-5px;border:6px solid transparent;border-left:9px solid var(--or)}
+.conn .proto{font:500 11px Inter;color:var(--mute)}
+.s2-bottom{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.info{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 20px}
+.info h4{font:800 16px Manrope;display:flex;gap:10px;align-items:center}
+.info p{margin-top:6px;font-size:14px;line-height:1.5;color:var(--ink2)}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+th{text-align:left;font:700 11.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);background:#F2EFE8;padding:11px 16px}
+td{padding:10px 16px;font-size:13.8px;line-height:1.42;color:var(--ink2);border-top:1px solid var(--line);vertical-align:top}
+td:first-child{font:700 14.5px Manrope;color:var(--ink);white-space:nowrap}
+td b{color:var(--ink)}
+.obj td:nth-child(2){width:31%}
+.obj td:nth-child(3){width:48%}
+.obj td:first-child{width:21%}
+
+.split{margin-top:34px;display:grid;grid-template-columns:1.25fr .75fr;gap:26px}
+.route td:nth-child(2){white-space:nowrap}.route td{padding:15px 16px;font-size:14.5px}.route td:first-child{font-size:15px}
+.tag-rest{display:inline-block;font:700 12px JB;padding:4px 10px;border-radius:7px;background:#E7EAF0;color:var(--ink2)}
+.tag-mq{display:inline-block;font:700 12px JB;padding:4px 10px;border-radius:7px;background:var(--or);color:#fff}
+.not{background:var(--ink);color:#fff;border-radius:18px;padding:26px 28px;display:flex;flex-direction:column}
+.not .zl{font:700 12px Inter;letter-spacing:.12em;text-transform:uppercase;color:#F7A774}
+.not h3{font-size:26px;margin-top:10px;line-height:1.15}
+.not .it{margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.14)}
+.not .it h4{font:700 16px Manrope;display:flex;gap:10px;align-items:center}
+.not .it h4:before{content:"✕";color:var(--or);font-size:14px}
+.not .it p{margin-top:6px;color:#B3BCCB;font-size:14px;line-height:1.5}
+.legend{margin-top:14px;font-size:13px;color:var(--mute)}
+</style>
+<style>
+/* ===== B/W print overrides, A4 landscape ===== */
+@page{size:297mm 210mm;margin:0}
+:root{--ink:#000;--ink2:#1a1a1a;--mute:#555;--line:#9a9a9a;--paper:#fff;--card:#fff;
+--or:#000;--or-soft:#fff;--teal:#000;--teal-soft:#fff;--yel:#000;--yel-soft:#fff;--red:#000;--red-soft:#fff}
+html,body{background:#fff}
+.slide{width:1122px;height:793px;background:#fff;padding:50px 60px}
+.foot{left:60px;right:60px}
+.foot{color:#555;bottom:28px}.foot b{color:#000}
+.title{color:#000}.kicker .n{background:#000;color:#fff}
+.kicker{color:#444}
+/* cover */
+.cover{background:#fff;color:#000}
+.cover .glow,.cover .glow2{display:none}
+.cover .inner{padding:110px 96px}
+.cover .tag{color:#000}.cover .tag i{background:#000}
+.cover h1{color:#000}.cover h1 span{color:#000;text-decoration:underline;text-decoration-thickness:6px;text-underline-offset:10px}
+.cover p.lead{color:#222}
+.pill{border:2px solid #000;background:#fff;color:#000}.pill.o{border-width:3px;color:#000;background:#fff}
+.arrow{background:#000}.arrow:after{border-left-color:#000}
+.cover .meta{color:#444}
+.cover .rule{position:absolute;left:96px;right:96px;bottom:70px;border-top:2px solid #000}
+/* dark blocks -> outlined */
+.quote,.broker,.not{background:#fff;color:#000;border:2.5px solid #000}
+.quote .lbl,.broker .zl,.not .zl{color:#000}
+.quote .q em{color:#000;text-decoration:underline;text-underline-offset:5px}
+.quote .sub,.not .it p{color:#222}
+.not .it{border-top:1px solid #999}.not .it h4:before{color:#000}
+.warn,.tri .c,.info,table{border:1.5px solid #777}
+.chip{background:#fff!important;color:#000!important;border:1.5px solid #000}
+.chip.r{border-style:dashed}
+.bottomline{background:#fff;border:2.5px solid #000}.bottomline b{color:#000}
+/* zones */
+.z1{background:#fff;border:2px solid #000}.z3{background:#fff;border:2px dashed #000}
+.z1 .zl,.z3 .zl{color:#000}
+.zone .note,.z3 .note{color:#333;border-top-color:#999}
+.step i{border:1.5px solid #000}
+.qu{background:#fff;border:1.5px solid #777;color:#000}.qu small{color:#444}
+.qu.m{border:2.5px solid #000;background:#fff}.qu.f{border:2px dashed #000;background:#fff}
+.conn .lab{color:#000}.conn .ln{background:#000}.conn .ln:after{border-left-color:#000}.conn .proto{color:#444}
+/* tables */
+th{background:#fff;color:#000;border-bottom:2px solid #000}
+td{border-top:1px solid #aaa;color:#111}
+.tag-rest{background:#fff;color:#000;border:1.5px solid #000}
+.tag-mq{background:#000;color:#fff}
+.legend{color:#333}
+.big-q{margin-top:24px}.tri{margin-top:18px}.bottomline{margin-top:18px}
+.title{font-size:36px}
+.quote .q{font-size:28px}
+.arch{margin-top:40px}.s2-bottom{margin-top:28px}
+td{padding:11px 16px;font-size:14.5px}
+.route td{padding:14px 16px}
+.split{margin-top:44px}
+</style>
+</head><body>
+
+<!-- ============ COVER ============ -->
+<section class="slide cover">
+  <div class="glow"></div><div class="glow2"></div>
+  <div class="inner">
+    <div class="tag"><i></i>Архитектура обмена · для инженера</div>
+    <h1>Обмен 1С ↔ сайт<br>через <span>RabbitMQ</span></h1>
+    <p class="lead">Кто отвечает за доставку, где проходит граница ответственности и чего ждать от платформы 1С — без маркетинга.</p>
+    <div class="flow">
+      <div class="pill">1С</div><div class="arrow"></div>
+      <div class="pill o">RabbitMQ</div><div class="arrow"></div>
+      <div class="pill">Сайт / Битрикс24</div>
+    </div>
+    <div class="rule"></div><div class="meta">Проект Битрикс24<br>3 темы · 4 слайда</div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 1 ============ -->
+<section class="slide">
+  <div class="kicker"><span class="n">1</span>В чём вопрос</div>
+  <h2 class="title">Спор «REST или брокер» — не о способе передачи байтов</h2>
+
+  <div class="big-q">
+    <div class="quote">
+      <div class="lbl">Настоящий вопрос</div>
+      <div class="q">Кто отвечает за доставку, когда <em>приёмник недоступен?</em></div>
+      <div class="sub">При прямых HTTP-вызовах ответ рано или поздно звучит как «мы напишем повторные попытки сами». Значит, очередь всё равно появится — только самодельная.</div>
+    </div>
+    <div class="warn">
+      <h3><span class="chip r">Самодельная очередь</span></h3>
+      <p>✕&nbsp; без панели управления<br>✕&nbsp; без dead-letter<br>✕&nbsp; без метрик</p>
+      <p style="margin-top:14px;color:var(--mute);font-size:14px">Повторы «своими руками» — та же очередь, только без инструментов вокруг неё.</p>
+    </div>
+  </div>
+
+  <div class="tri">
+    <div class="c"><span class="chip o">Брокер оправдан</span><h4>Поток событий и пики</h4><p>Несколько получателей одного события и пиковые выгрузки.</p></div>
+    <div class="c"><span class="chip t">Остаётся на REST</span><h4>Нужен ответ «здесь и сейчас»</h4><p>Проверить остаток, цену, наличие — синхронный ответ по смыслу.</p></div>
+    <div class="c"><span class="chip r">Неприменим</span><h4>Облачная 1С (1cFresh)</h4><p>Внешние компоненты недоступны — разговор про брокер заканчивается сразу.</p></div>
+  </div>
+
+  <div class="bottomline"><b>Спокойная раскладка</b><span>1С публикует в брокер, входящие события принимает HTTP-сервисом.</span></div>
+  <div class="foot"><span>Обмен 1С ↔ сайт через <b>RabbitMQ</b></span><span>1 / 4</span></div>
+</section>
+
+<!-- ============ SLIDE 2 ============ -->
+<section class="slide">
+  <div class="kicker"><span class="n">2</span>Устройство и ответственность</div>
+  <h2 class="title">Как это устроено и кто за что отвечает</h2>
+
+  <div class="arch">
+    <div class="zone z1">
+      <div class="zl">Зона 1С · подрядчик</div>
+      <h4>Гарантированная публикация</h4>
+      <div class="step"><i>1</i><span><b>План обмена</b> (outbox) регистрирует изменение</span></div>
+      <div class="step"><i>2</i><span><b>Регламентное задание</b> публикует сообщение</span></div>
+      <div class="step"><i>3</i><span>Регистрация снимается <b>только после ack</b></span></div>
+      <div class="note">1С контролирует весь обмен со своей стороны</div>
+    </div>
+    <div class="conn"><span class="lab">publish</span><div class="ln"></div><span class="proto">AMQP</span></div>
+    <div class="broker">
+      <div class="zl">Брокер</div>
+      <h4>3 очереди на сущность</h4>
+      <div class="qu m">import.&lt;entity&gt;.main.v1<small>основная — сюда публикует 1С</small></div>
+      <div class="qu">import.&lt;entity&gt;.delayedFirst.v1<small>пауза при временной ошибке → назад в main</small></div>
+      <div class="qu f">import.failed.v1<small>общий dead-letter · разбор вручную</small></div>
+    </div>
+    <div class="conn"><span class="lab">consume</span><div class="ln"></div><span class="proto">демоны</span></div>
+    <div class="zone z3">
+      <div class="zl">Зона сайта / B24</div>
+      <h4>Консьюмеры</h4>
+      <div class="step"><i>1</i><span>Демоны под <b>Supervisor</b> читают очередь</span></div>
+      <div class="step"><i>2</i><span>Разбирают сообщение, пишут в <b>БД сайта</b></span></div>
+      <div class="step"><i>3</i><span>Ошибка → повтор или <b>dead-letter</b></span></div>
+      <div class="note">Сайт не знает и не диктует, что и как публикуется</div>
+    </div>
+  </div>
+
+  <div class="s2-bottom">
+    <div class="info">
+      <h4><span class="chip y">Граница</span>Ответственность — жёсткая</h4>
+      <p>Всё слева до <code>publish</code> — зона 1С-программиста: логика выгрузки, публикация, повторы на своей стороне, состав пакетов и целостность. Сущности: товар, цена, остаток, разделы, склады, карта, клиент.</p>
+    </div>
+    <div class="info">
+      <h4><span class="chip t">Идемпотентность</span>Повтор не страшен</h4>
+      <p>Порядок гарантирован только в пределах одной очереди с одним потребителем. Каждое сообщение несёт метку синхронизации: пришло «старее» записанного — апдейт пропускается.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Обмен 1С ↔ сайт через <b>RabbitMQ</b></span><span>2 / 4</span></div>
+</section>
+
+<!-- ============ SLIDE 3a ============ -->
+<section class="slide">
+  <div class="kicker"><span class="n">3</span>Чего ожидать от платформы 1С</div>
+  <h2 class="title">Возражения — заранее</h2>
+  <p style="margin:10px 0 18px;color:var(--ink2);font-size:16px">Возражения 1С-подрядчиков чаще всего обоснованы. Отвечаем на них до начала работ.</p>
+  <table class="obj">
+    <tr><th>Тема</th><th>Суть</th><th>Как закрываем</th></tr>
+    <tr><td>«Много писать»</td><td>Кажется, что outbox, публикатор и сборка сообщений — большой объём</td><td>Типовой код: план обмена + регл. задание + JSON. Пишется быстро, в т.ч. ИИ-агентом. Сложность не в объёме, а в <b>решениях</b>: контракт, идемпотентность, ack</td></tr>
+    <tr><td>Нет нативного AMQP</td><td>В 1С нет встроенной работы с брокером</td><td>Native-компонента <b>PinkRabbitMQ</b> (BiteRP). На серверах приложений, привязана к разрядности, проверяется после каждого обновления платформы</td></tr>
+    <tr><td>1С — плохой потребитель</td><td>Фоновый слушатель занимает лицензию, рвётся по таймаутам, плохо переживает обновление</td><td>1С только <b>публикует</b>. Входящее — HTTP-сервисом или служба-посредник на стороне сайта дёргает HTTP 1С</td></tr>
+    <tr><td>Транзакции</td><td>Внутри транзакции публиковать нельзя, после записи — теряется при падении</td><td>Нужен <b>outbox</b> — в 1С он уже есть: это <b>план обмена</b>. Регистрация снимается только после успешной публикации</td></tr>
+    <tr><td>Наблюдаемость</td><td>Нет привычных журнала регистрации и кода ответа HTTP</td><td>Доступ к панели RabbitMQ, метрика глубины очередей, оповещение при росте</td></tr>
+    <tr><td>Эксплуатация</td><td>Брокер — отдельный сервис: обновления, диск, устойчивость</td><td>Типовой отказ — <b>дисковый</b>: разросшиеся логи способны остановить бэкап. Ротация и мониторинг диска обязательны</td></tr>
+  </table>
+  <div class="foot"><span>Обмен 1С ↔ сайт через <b>RabbitMQ</b></span><span>3 / 4</span></div>
+</section>
+
+<!-- ============ SLIDE 3b ============ -->
+<section class="slide">
+  <div class="kicker"><span class="n">3</span>Чего ожидать от платформы 1С</div>
+  <h2 class="title">Где проходит граница REST ↔ брокер</h2>
+  <div class="split">
+    <div>
+      <table class="route">
+        <tr><th>Сценарий</th><th>Чем</th><th>Почему</th></tr>
+        <tr><td>Проверить остаток, цену, наличие</td><td><span class="tag-rest">REST</span></td><td>Нужен ответ здесь и сейчас</td></tr>
+        <tr><td>Заказ с подтверждением клиенту</td><td><span class="tag-rest">REST</span></td><td>Ответ — часть сценария покупки</td></tr>
+        <tr><td>Выгрузка цен, остатков, карточек</td><td><span class="tag-mq">Брокер</span></td><td>Поток, пики, несколько получателей</td></tr>
+        <tr><td>События покупателя</td><td><span class="tag-mq">Брокер</span></td><td>Регистрация, бонусы: получателей несколько, порядок не критичен</td></tr>
+        <tr><td>Клиент в облачной 1С</td><td><span class="tag-rest">REST</span></td><td>1cFresh: внешние компоненты недоступны</td></tr>
+        <tr><td>Некому администрировать</td><td><span class="tag-rest">REST</span></td><td>Брокер требует сопровождения</td></tr>
+      </table>
+      <div class="legend">Правило простое: нужен синхронный ответ или нет ресурса на сопровождение — REST. Поток и много получателей — брокер.</div>
+    </div>
+    <div class="not">
+      <div class="zl">Важно</div>
+      <h3>Чего брокер НЕ делает</h3>
+      <div class="it"><h4>Не улучшает качество данных</h4><p>Кривые цены и неполные поля лечатся в 1С, а не в транспорте.</p></div>
+      <div class="it"><h4>Не заменяет полную перезаливку</h4><p>При расхождении сторон нужен отдельный механизм сверки.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>Обмен 1С ↔ сайт через <b>RabbitMQ</b></span><span>4 / 4</span></div>
+</section>
+</body></html>
