@@ -4,7 +4,7 @@ Part of the agent-readiness skill (see ../SKILL.md).
 
 ## nginx
 
-Full working config: [`nginx.conf`](https://github.com/bx-shef/obmen/blob/main/nginx.conf). The parts that matter
+Full working config (obmen's — your repository has its own): [`nginx.conf`](https://github.com/bx-shef/obmen/blob/main/nginx.conf). The parts that matter
 (shortened — the real file has one line per URL in each map, including
 `/index.html` next to `/`):
 

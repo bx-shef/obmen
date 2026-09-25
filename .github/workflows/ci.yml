@@ -102,6 +102,49 @@ jobs:
           rm -rf "$tmp"
           exit $fail
 
+      # Skills are loaded by agents automatically, and their scripts run on
+      # someone's machine; a broken one fails silently. Checked: shell syntax,
+      # SKILL.md frontmatter, and every relative link in the skills and docs.
+      - name: Check skills and scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in scripts/*.sh .claude/skills/*/scripts/*.sh; do
+            [ -e "$f" ] || continue
+            bash -n "$f" || { echo "::error file=$f::shell syntax error"; fail=1; }
+            [ -x "$f" ] || { echo "::error file=$f::not executable"; fail=1; }
+          done
+          python3 - <<'PY' || fail=1
+          import pathlib, re, sys
+          bad = 0
+          def err(f, msg):
+              global bad
+              print(f"::error file={f}::{msg}"); bad = 1
+          for skill in pathlib.Path(".claude/skills").glob("*/SKILL.md"):
+              text = skill.read_text(encoding="utf-8")
+              m = re.match(r"---\n(.*?)\n---\n", text, re.S)
+              if not m:
+                  err(skill, "missing YAML frontmatter"); continue
+              front = dict(re.findall(r"^(\w+):\s*(.*)$", m.group(1), re.M))
+              if front.get("name") != skill.parent.name:
+                  err(skill, f"name must be '{skill.parent.name}'")
+              desc = front.get("description", "")
+              if not desc:
+                  err(skill, "description is empty")
+              if "<" in desc or ">" in desc:
+                  err(skill, "description must not contain angle brackets")
+          docs = list(pathlib.Path(".claude/skills").rglob("*.md")) + list(pathlib.Path("docs").glob("*.md"))
+          for f in docs:
+              for target in re.findall(r"\]\(([^)\s]+)\)", f.read_text(encoding="utf-8")):
+                  if re.match(r"^(https?:|mailto:|#)", target) or target == "url":
+                      continue
+                  if not (f.parent / target.split("#")[0]).exists():
+                      err(f, f"broken relative link: {target}")
+          sys.exit(bad)
+          PY
+          exit $fail
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 

@@ -42,7 +42,7 @@ curl -s -o /dev/null -w '%{content_type}\n' -H 'Accept: text/markdown;q=0, text/
 curl -sI "$SITE/llms.txt" | grep -i content-type
 curl -s  "$SITE/llms.txt" | head -3
 
-# robots.txt must not block the agents you want (see 2.3)
+# robots.txt must not block the agents you want (see "robots.txt and bot names" below)
 curl -s "$SITE/robots.txt"
 
 # Open Graph: one og:image, absolute URL, served as an image

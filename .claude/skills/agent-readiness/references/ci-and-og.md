@@ -4,7 +4,7 @@ Part of the agent-readiness skill (see ../SKILL.md).
 
 ## CI checks
 
-All in [`.github/workflows/ci.yml`](https://github.com/bx-shef/obmen/blob/main/.github/workflows/ci.yml), step
+obmen's example — your repository has its own workflow: all in [`.github/workflows/ci.yml`](https://github.com/bx-shef/obmen/blob/main/.github/workflows/ci.yml), step
 "Smoke test container", run against the built image. Agent-related:
 
 - every `site/*.html` has `<link rel="alternate" type="text/markdown">`, and the

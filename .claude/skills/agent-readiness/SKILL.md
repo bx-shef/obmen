@@ -1,6 +1,6 @@
 ---
 name: agent-readiness
-description: Make a website readable by AI agents and audit how well it already is — llms.txt, hand-written Markdown twins of pages (.md), the HTML link rel="alternate" type="text/markdown", nginx content negotiation on Accept text/markdown, Link/Vary/canonical headers, robots.txt rules for AI bots (GPTBot, ClaudeBot, Claude-User, ChatGPT-User, PerplexityBot), Open Graph share cards, and the CI checks that keep all of it working. Use this whenever someone wants AI assistants, LLMs or agents to read, understand, cite or order from a site, asks about llms.txt or "markdown for agents", wants prices/contacts/offers written for AI, wants to check or improve a site's "AI indexing" / AI visibility, or edits nginx to serve Markdown — even if they don't say "agent readiness". Distilled from obmen.bx-shef.by.
+description: Make a website readable by AI agents and audit how well it already is — llms.txt, hand-written Markdown twins of pages (.md), the HTML link rel="alternate" type="text/markdown", nginx content negotiation on Accept text/markdown, Link/Vary/canonical headers, robots.txt rules for AI bots (GPTBot, ClaudeBot, Claude-User, ChatGPT-User, PerplexityBot), Open Graph share cards, and the CI checks that keep all of it working. Use this whenever someone wants AI assistants, LLMs or agents to read, understand, cite or order from a site, asks about llms.txt or "markdown for agents", wants prices/contacts/offers written for AI, wants to check or improve a site's "AI indexing" / AI visibility, or edits nginx to serve Markdown — even if they don't say "agent readiness". Also for Russian requests such as "чтобы ИИ читали сайт", "разметка для ИИ-агентов", "ИИ-индексация", "сделать llms.txt", "проверить сайт для нейросетей". Distilled from obmen.bx-shef.by.
 ---
 
 # Agent readiness
@@ -22,8 +22,9 @@ with checks. Worked example: obmen.bx-shef.by (repo `bx-shef/obmen`).
 
 ## Workflow
 
-1. **Audit the live site.** Run `scripts/agent-audit.sh <site> [pages]` from
-   this skill (PASS/FAIL per check, non-zero exit on failure). Details, manual
+1. **Audit the live site.** Run
+   `.claude/skills/agent-readiness/scripts/agent-audit.sh <site> [pages]`
+   (PASS/FAIL per check, non-zero exit on failure). Details, manual
    `curl` commands, external checkers, robots.txt bot names and logging:
    `references/audit.md`.
 2. **Write the agent-facing text** — `/llms.txt` and a hand-written `.md` twin
@@ -39,8 +40,9 @@ with checks. Worked example: obmen.bx-shef.by (repo `bx-shef/obmen`).
    `references/nginx.md`.
 5. **Add an Open Graph card** per page (1200×630 PNG, full tag set) and the
    **CI checks** with a negative test for each: `references/ci-and-og.md`.
-6. **Deploy, wait for it to go live** (Watchtower: ~5 minutes), **run the
-   audit again** against the live site.
+6. **Ship through the normal PR and review; the owner approves the merge**
+   that deploys it — don't push or deploy on your own. Once it is live
+   (Watchtower: ~5 minutes), **run the audit again** against the live site.
 
 `references/lessons.md` lists traps we hit along the way (pipefail, Docker
 cache dates, Makefile self-update, deploy timing). Skim it before step 4–5.
@@ -79,4 +81,5 @@ cache dates, Makefile self-update, deploy timing). Skim it before step 4–5.
 6. Open Graph card per page: 1200×630 PNG, `og:image` (absolute),
    `og:image:type/width/height/alt`, `twitter:card`, `twitter:image`.
 7. CI: the checks in `references/ci-and-og.md`, each with a negative test.
-8. After deploy: `scripts/agent-audit.sh <site>` passes on the live site.
+8. After deploy: `.claude/skills/agent-readiness/scripts/agent-audit.sh <site>`
+   passes on the live site.
