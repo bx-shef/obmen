@@ -1,0 +1,6 @@
+# Local preview: docker compose up --build → http://localhost:8082
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8082:8080"

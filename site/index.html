@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Обмен 1С ↔ сайт через RabbitMQ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%90%87%3C/text%3E%3C/svg%3E">
+<link rel="canonical" href="https://obmen.bx-shef.by/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="bx-shef.by">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:url" content="https://obmen.bx-shef.by/">
+<meta property="og:title" content="Обмен 1С ↔ сайт через RabbitMQ">
+<meta property="og:description" content="Обмен 1С ↔ сайт через RabbitMQ: кто отвечает за доставку, граница ответственности, возражения 1С-подрядчиков.">
+<meta name="description" content="Обмен 1С ↔ сайт через RabbitMQ: кто отвечает за доставку, граница ответственности, возражения 1С-подрядчиков.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAF8F3; --card:#FFFFFF; --soft:#F2EFE8; --line:#E3E0D8;
+  --ink:#0E1726; --ink2:#2B3547; --mute:#6B7486;
+  --dark:#0E1726; --dark-ink:#FFFFFF; --dark-mute:#AEB7C6; --dark-line:rgba(255,255,255,.14);
+  --or:#F26B1D; --or-ink:#B24A0D; --or-soft:#FDEBDD; --or-line:#F7C9A8;
+  --teal:#127C7A; --teal-soft:#DDF0EE; --teal-line:#A9D8D3;
+  --yel-ink:#8A6A00; --yel-soft:#FCF3D2; --yel-line:#EED889;
+  --red:#C8402F; --red-soft:#F8E1DD;
+  --chip-rest:#E7EAF0;
+  --f-head:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B111B; --card:#131B28; --soft:#1A2433; --line:#253145;
+    --ink:#EEF1F6; --ink2:#C3CAD6; --mute:#8791A3;
+    --dark:#18233A; --dark-line:rgba(255,255,255,.12);
+    --or-ink:#FFA66E; --or-soft:rgba(242,107,29,.14); --or-line:rgba(242,107,29,.4);
+    --teal:#4FC1BC; --teal-soft:rgba(18,124,122,.2); --teal-line:rgba(79,193,188,.35);
+    --yel-ink:#F2CB4C; --yel-soft:rgba(242,183,5,.12); --yel-line:rgba(242,183,5,.35);
+    --red:#F08A7A; --red-soft:rgba(200,64,47,.18);
+    --chip-rest:#253145;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B111B; --card:#131B28; --soft:#1A2433; --line:#253145;
+  --ink:#EEF1F6; --ink2:#C3CAD6; --mute:#8791A3;
+  --dark:#18233A; --dark-line:rgba(255,255,255,.12);
+  --or-ink:#FFA66E; --or-soft:rgba(242,107,29,.14); --or-line:rgba(242,107,29,.4);
+  --teal:#4FC1BC; --teal-soft:rgba(18,124,122,.2); --teal-line:rgba(79,193,188,.35);
+  --yel-ink:#F2CB4C; --yel-soft:rgba(242,183,5,.12); --yel-line:rgba(242,183,5,.35);
+  --red:#F08A7A; --red-soft:rgba(200,64,47,.18);
+  --chip-rest:#253145;
+}
+*,*:before,*:after{box-sizing:inherit;margin:0;padding:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--f-head);letter-spacing:-.02em;color:inherit}
+code{font-family:var(--f-mono);font-size:.88em}
+b{font-weight:650}
+img,svg{max-width:100%}
+:focus-visible{outline:2px solid var(--or);outline-offset:3px;border-radius:4px}
+
+.slide{min-height:100svh;display:flex;align-items:center;padding:clamp(28px,5vw,64px) clamp(18px,5vw,72px);border-bottom:1px solid var(--line)}
+.slide>.in{width:100%;max-width:1180px;margin:0 auto}
+@media (min-width:900px) and (min-height:640px){
+  html{scroll-snap-type:y proximity}
+  .slide{scroll-snap-align:start}
+}
+.kicker{display:flex;align-items:center;gap:12px;font:600 13px/1 var(--f-body);color:var(--mute)}
+.kicker .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--dark);color:#fff;font:700 14px/1 var(--f-head)}
+.title{font-size:clamp(26px,3.6vw,40px);font-weight:800;line-height:1.12;margin-top:14px}
+.lede{margin-top:10px;color:var(--ink2);font-size:clamp(15px,1.6vw,17px)}
+
+.chip{display:inline-block;font:700 11px/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:7px}
+.chip.o{background:var(--or-soft);color:var(--or-ink)} .chip.t{background:var(--teal-soft);color:var(--teal)}
+.chip.r{background:var(--red-soft);color:var(--red)} .chip.y{background:var(--yel-soft);color:var(--yel-ink)}
+
+/* cover */
+.cover{background:#0E1726;color:#fff;position:relative;overflow:hidden;border-bottom:0}
+.cover:before{content:"";position:absolute;right:-18vw;top:-22vw;width:62vw;height:62vw;border-radius:50%;background:radial-gradient(circle,rgba(242,107,29,.42),rgba(242,107,29,0) 65%);pointer-events:none}
+.cover:after{content:"";position:absolute;left:-18vw;bottom:-28vw;width:56vw;height:56vw;border-radius:50%;background:radial-gradient(circle,rgba(18,124,122,.35),rgba(18,124,122,0) 65%);pointer-events:none}
+.cover .in{position:relative;z-index:1}
+.cover .tag{display:flex;gap:10px;align-items:center;font:600 13px var(--f-body);color:#F7A774}
+.cover .tag i{width:36px;height:2px;background:var(--or);display:block}
+.cover h1{font-size:clamp(40px,7.4vw,84px);font-weight:800;line-height:1.02;letter-spacing:-.035em;margin-top:26px}
+.cover h1 span{color:var(--or)}
+.cover .lead{margin-top:24px;font-size:clamp(17px,2vw,22px);line-height:1.5;color:#B9C1CF;max-width:44rem}
+.flow{margin-top:clamp(36px,7vh,80px);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pill{padding:12px 20px;border-radius:14px;font:700 17px var(--f-head);border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04)}
+.pill.o{border-color:var(--or);color:#FFB286}
+.arrow{width:56px;height:2px;background:linear-gradient(90deg,rgba(255,255,255,.2),var(--or));position:relative}
+.arrow:after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:9px solid var(--or)}
+.hint-scroll{margin-top:28px;font-size:14px;color:#8791A3}
+@media (hover:none),(max-width:760px){.hint-scroll{display:none}}
+@media (max-width:560px){.flow{flex-direction:column;align-items:flex-start}.arrow{width:2px;height:22px;margin-left:24px;background:linear-gradient(180deg,rgba(255,255,255,.2),var(--or))}.arrow:after{right:auto;left:-5px;top:auto;bottom:-3px;border:6px solid transparent;border-top:9px solid var(--or)}}
+
+/* slide 1 */
+.big-q{margin-top:28px;display:grid;grid-template-columns:1.15fr .85fr;gap:24px}
+.quote{background:var(--dark);color:var(--dark-ink);border-radius:22px;padding:clamp(22px,3vw,34px) clamp(22px,3vw,38px)}
+.lbl{font:600 12px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:#F7A774}
+.quote .q{font:800 clamp(24px,3vw,34px)/1.18 var(--f-head);margin-top:12px;letter-spacing:-.02em}
+.quote .q em{font-style:normal;color:var(--or)}
+.quote .sub{margin-top:16px;color:var(--dark-mute);font-size:16px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px}
+.box ul{list-style:none;margin-top:12px;color:var(--ink2)}
+.box li:before{content:"✕";color:var(--red);font-weight:700;margin-right:10px}
+.box .muted{margin-top:12px;color:var(--mute);font-size:14px}
+.tri{margin-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tri .c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.tri h4{font:700 17px var(--f-head);margin-top:12px}
+.tri p{font-size:14.5px;color:var(--ink2);margin-top:6px}
+.bottomline{margin-top:20px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:16px 22px;border-radius:14px;background:var(--or-soft);border:1px solid var(--or-line)}
+.bottomline b{font:800 14px var(--f-head);color:var(--or-ink);letter-spacing:.04em;text-transform:uppercase}
+.bottomline span{font-size:17px;font-weight:600}
+@media (max-width:860px){.big-q,.tri{grid-template-columns:1fr}}
+
+/* slide 2 */
+.arch{margin-top:26px;display:grid;grid-template-columns:1fr 64px minmax(280px,340px) 64px 1fr;align-items:stretch}
+.zone{border-radius:18px;padding:20px 22px}
+.zone .zl{font:700 12px var(--f-body);letter-spacing:.1em;text-transform:uppercase}
+.zone h4{font:800 20px var(--f-head);margin-top:6px}
+.z1{background:var(--yel-soft);border:1.5px solid var(--yel-line)} .z1 .zl{color:var(--yel-ink)}
+.z3{background:var(--teal-soft);border:1.5px solid var(--teal-line)} .z3 .zl{color:var(--teal)}
+.zone ol{list-style:none;counter-reset:s;margin-top:4px}
+.zone li{counter-increment:s;display:flex;gap:10px;margin-top:12px;font-size:14.5px;line-height:1.4;color:var(--ink2)}
+.zone li:before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;background:var(--card);display:grid;place-items:center;font:700 12px var(--f-head);color:var(--ink)}
+.zone .note{margin-top:14px;font-size:13px;color:var(--mute);border-top:1px dashed var(--line);padding-top:10px}
+.broker{background:var(--dark);color:var(--dark-ink);border-radius:18px;padding:18px}
+.broker h4{font:800 20px var(--f-head);margin-top:6px}
+.qu{margin-top:10px;border-radius:10px;padding:10px 12px;font:600 12.5px var(--f-mono);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);overflow-wrap:anywhere}
+.qu small{display:block;font:500 12.5px var(--f-body);color:#9AA3B2;margin-top:3px}
+.qu.m{border-color:var(--or);background:rgba(242,107,29,.14)}
+.qu.f{border-color:#E0705F;background:rgba(200,64,47,.16)}
+.conn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 4px}
+.conn .lab{font:700 11px var(--f-mono);color:var(--or)}
+.conn .ln{width:100%;height:2px;background:var(--or);position:relative}
+.conn .ln:after{content:"";position:absolute;right:-1px;top:-5px;border:6px solid transparent;border-left:9px solid var(--or)}
+.conn .proto{font:500 11px var(--f-body);color:var(--mute)}
+@media (max-width:980px){
+  .arch{grid-template-columns:1fr;max-width:560px}
+  .conn{flex-direction:row;padding:10px 0;gap:12px}
+  .conn .ln{width:2px;height:28px;order:2}
+  .conn .ln:after{right:auto;left:-5px;top:auto;bottom:-3px;border:6px solid transparent;border-top:9px solid var(--or)}
+  .conn .lab{order:1}.conn .proto{order:3}
+}
+.pair{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.info{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 20px}
+.info h4{font:800 16px var(--f-head);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.info p{margin-top:8px;font-size:14.5px;color:var(--ink2)}
+.info code{background:var(--soft);padding:1px 5px;border-radius:4px}
+@media (max-width:760px){.pair{grid-template-columns:1fr}}
+
+/* tables -> cards on mobile */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.tbl th{text-align:left;font:700 11.5px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:var(--soft);padding:11px 16px}
+.tbl td{padding:12px 16px;font-size:14.5px;line-height:1.45;color:var(--ink2);border-top:1px solid var(--line);vertical-align:top}
+.tbl td:first-child{font:700 15px var(--f-head);color:var(--ink)}
+.tbl td b{color:var(--ink)}
+.obj{margin-top:18px}
+.obj td:first-child{width:20%}.obj td:nth-child(2){width:32%}
+@media (max-width:760px){
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:auto!important}
+  .tbl thead{display:none}
+  .tbl{background:none;border:0;border-radius:0}
+  .tbl tr{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:12px}
+  .tbl td{border:0;padding:0}
+  .tbl td+td{margin-top:10px}
+  .tbl td[data-l]:before{content:attr(data-l);display:block;font:700 11px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
+}
+
+.split{margin-top:26px;display:grid;grid-template-columns:1.3fr .7fr;gap:24px;align-items:start}
+.tag-rest,.tag-mq{display:inline-block;font:700 12px var(--f-mono);padding:4px 10px;border-radius:7px;white-space:nowrap}
+.tag-rest{background:var(--chip-rest);color:var(--ink2)} .tag-mq{background:var(--or);color:#fff}
+.legend{margin-top:12px;font-size:14px;color:var(--mute)}
+.not{background:var(--dark);color:var(--dark-ink);border-radius:18px;padding:24px 26px}
+.not h3{font-size:24px;margin-top:10px;line-height:1.15}
+.not .it{margin-top:18px;padding-top:16px;border-top:1px solid var(--dark-line)}
+.not .it h4{font:700 16px var(--f-head)}
+.not .it h4:before{content:"✕  ";color:var(--or)}
+.not .it p{margin-top:6px;color:var(--dark-mute);font-size:14.5px}
+@media (max-width:900px){.split{grid-template-columns:1fr}}
+
+/* nav dots */
+.dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:5}
+.dots a{width:10px;height:10px;border-radius:50%;background:var(--mute);opacity:.35;display:block}
+.dots a.on{background:var(--or);opacity:1}
+@media (max-width:980px),(max-height:620px){.dots{display:none}}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:10px 18px;border-radius:12px;font:600 15px/1.2 var(--f-body);text-decoration:none;border:1.5px solid currentColor}
+.btn svg{width:18px;height:18px;flex:none}
+.btn.primary{background:#F26B1D;border-color:#F26B1D;color:#fff}
+.btn.primary:hover{background:#D95A10;border-color:#D95A10}
+.btn.ghost-dark{color:#fff;border-color:rgba(255,255,255,.35)}
+.btn.ghost-dark:hover{border-color:#fff}
+.btn.ghost{color:var(--ink);border-color:var(--line);background:var(--card,var(--paper))}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn small{display:block;font:500 12px var(--f-body);opacity:.7}
+.cta{border-radius:20px;border:1px solid var(--line);background:#0E1726;color:#fff;padding:clamp(24px,4vw,40px);position:relative;overflow:hidden}
+.cta h2{font-size:clamp(24px,3vw,32px);line-height:1.15;color:#fff}
+.cta p{margin-top:10px;color:#B7C0CE;max-width:40rem}
+.downloads{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.dl{display:flex;gap:14px;align-items:center;padding:16px 18px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink);background:var(--card,var(--paper))}
+.dl:hover{border-color:var(--ink)}
+.dl .ico{flex:none;width:40px;height:48px;border-radius:6px;border:1.5px solid var(--ink);display:grid;place-items:center;font:700 11px var(--f-mono)}
+.dl b{display:block;font:700 16px/1.3 var(--f-head)}
+.dl span{font-size:13.5px;color:var(--mute)}
+@media (max-width:640px){.downloads{grid-template-columns:1fr}.btn{width:100%;justify-content:center}}
+.final .in>h2{margin-bottom:6px}
+.lede a{color:var(--or-ink);text-underline-offset:3px}
+</style>
+</head>
+<body>
+
+<nav class="dots" aria-label="Слайды">
+  <a href="#s0" aria-label="Обложка"></a><a href="#s1" aria-label="В чём вопрос"></a><a href="#s2" aria-label="Устройство"></a><a href="#s3" aria-label="Возражения"></a><a href="#s4" aria-label="REST или брокер"></a><a href="#s5" aria-label="Материалы"></a>
+</nav>
+
+<section class="slide cover" id="s0">
+  <div class="in">
+    <div class="tag"><i></i>Архитектура обмена для инженера</div>
+    <h1>Обмен 1С ↔ сайт<br>через <span>RabbitMQ</span></h1>
+    <p class="lead">Кто отвечает за доставку, где проходит граница ответственности и чего ждать от платформы 1С — без маркетинга.</p>
+    <div class="flow" aria-hidden="true">
+      <div class="pill">1С</div><div class="arrow"></div>
+      <div class="pill o">RabbitMQ</div><div class="arrow"></div>
+      <div class="pill">Сайт / Битрикс24</div>
+    </div>
+    <div class="btns">
+      <a class="btn primary" href="https://offer.bx-shef.by/">Заказать <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+      <a class="btn ghost-dark" href="files/1c-rabbitmq-presentation.pdf" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Презентация, PDF</a>
+      <a class="btn ghost-dark" href="files/1c-rabbitmq-plan.pdf" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>План работ, PDF</a>
+    </div>
+    <p class="hint-scroll">Листайте вниз или стрелками ↓ ↑</p>
+  </div>
+</section>
+
+<section class="slide" id="s1">
+  <div class="in">
+    <div class="kicker"><span class="n">1</span>В чём вопрос</div>
+    <h2 class="title">Спор «REST или брокер» — не о способе передачи байтов</h2>
+    <div class="big-q">
+      <div class="quote">
+        <div class="lbl">Настоящий вопрос</div>
+        <div class="q">Кто отвечает за доставку, когда <em>приёмник недоступен?</em></div>
+        <p class="sub">При прямых HTTP-вызовах ответ рано или поздно звучит как «мы напишем повторные попытки сами». Значит, очередь всё равно появится — только самодельная.</p>
+      </div>
+      <div class="box">
+        <span class="chip r">Самодельная очередь</span>
+        <ul><li>без панели управления</li><li>без dead-letter</li><li>без метрик</li></ul>
+        <p class="muted">Повторы «своими руками» — та же очередь, только без инструментов вокруг неё.</p>
+      </div>
+    </div>
+    <div class="tri">
+      <div class="c"><span class="chip o">Брокер оправдан</span><h4>Поток событий и пики</h4><p>Несколько получателей одного события и пиковые выгрузки.</p></div>
+      <div class="c"><span class="chip t">Остаётся на REST</span><h4>Нужен ответ «здесь и сейчас»</h4><p>Проверить остаток, цену, наличие — синхронный ответ по смыслу.</p></div>
+      <div class="c"><span class="chip r">Неприменим</span><h4>Облачная 1С (1cFresh)</h4><p>Внешние компоненты недоступны — разговор про брокер заканчивается сразу.</p></div>
+    </div>
+    <div class="bottomline"><b>Спокойная раскладка</b><span>1С публикует в брокер, входящие события принимает HTTP-сервисом.</span></div>
+  </div>
+</section>
+
+<section class="slide" id="s2">
+  <div class="in">
+    <div class="kicker"><span class="n">2</span>Устройство и ответственность</div>
+    <h2 class="title">Как это устроено и кто за что отвечает</h2>
+    <div class="arch">
+      <div class="zone z1">
+        <div class="zl">Зона 1С, подрядчик</div>
+        <h4>Гарантированная публикация</h4>
+        <ol>
+          <li><span><b>План обмена</b> (outbox) регистрирует изменение</span></li>
+          <li><span><b>Регламентное задание</b> публикует сообщение</span></li>
+          <li><span>Регистрация снимается <b>только после ack</b></span></li>
+        </ol>
+        <div class="note">1С контролирует весь обмен со своей стороны</div>
+      </div>
+      <div class="conn" aria-hidden="true"><span class="lab">publish</span><div class="ln"></div><span class="proto">AMQP</span></div>
+      <div class="broker">
+        <div class="lbl">Брокер</div>
+        <h4>3 очереди на сущность</h4>
+        <div class="qu m">import.&lt;entity&gt;.main.v1<small>основная — сюда публикует 1С</small></div>
+        <div class="qu">import.&lt;entity&gt;.delayedFirst.v1<small>пауза при временной ошибке, потом назад в main</small></div>
+        <div class="qu f">import.failed.v1<small>общий dead-letter, разбор вручную</small></div>
+      </div>
+      <div class="conn" aria-hidden="true"><span class="lab">consume</span><div class="ln"></div><span class="proto">демоны</span></div>
+      <div class="zone z3">
+        <div class="zl">Зона сайта / B24</div>
+        <h4>Консьюмеры</h4>
+        <ol>
+          <li><span>Демоны под <b>Supervisor</b> читают очередь</span></li>
+          <li><span>Разбирают сообщение, пишут в <b>БД сайта</b></span></li>
+          <li><span>Ошибка → повтор или <b>dead-letter</b></span></li>
+        </ol>
+        <div class="note">Сайт не знает и не диктует, что и как публикуется</div>
+      </div>
+    </div>
+    <div class="pair">
+      <div class="info">
+        <h4><span class="chip y">Граница</span>Ответственность — жёсткая</h4>
+        <p>Всё слева до <code>publish</code> — зона 1С-программиста: логика выгрузки, публикация, повторы на своей стороне, состав пакетов и целостность. Сущности: товар, цена, остаток, разделы, склады, карта, клиент.</p>
+      </div>
+      <div class="info">
+        <h4><span class="chip t">Идемпотентность</span>Повтор не страшен</h4>
+        <p>Порядок гарантирован только в пределах одной очереди с одним потребителем. Каждое сообщение несёт метку синхронизации: пришло «старее» записанного — апдейт пропускается.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s3">
+  <div class="in">
+    <div class="kicker"><span class="n">3</span>Чего ожидать от платформы 1С</div>
+    <h2 class="title">Возражения — заранее</h2>
+    <p class="lede">Возражения 1С-подрядчиков чаще всего обоснованы. Отвечаем на них до начала работ.</p>
+    <table class="tbl obj">
+      <thead><tr><th>Тема</th><th>Суть</th><th>Как закрываем</th></tr></thead>
+      <tbody>
+      <tr><td>«Много писать»</td><td data-l="Суть">Кажется, что outbox, публикатор и сборка сообщений — большой объём</td><td data-l="Как закрываем">Типовой код: план обмена + регл. задание + JSON. Пишется быстро, в т.ч. ИИ-агентом. Сложность не в объёме, а в <b>решениях</b>: контракт, идемпотентность, ack</td></tr>
+      <tr><td>Нет нативного AMQP</td><td data-l="Суть">В 1С нет встроенной работы с брокером</td><td data-l="Как закрываем">Native-компонента <b>PinkRabbitMQ</b> (BiteRP). На серверах приложений, привязана к разрядности, проверяется после каждого обновления платформы</td></tr>
+      <tr><td>1С — плохой потребитель</td><td data-l="Суть">Фоновый слушатель занимает лицензию, рвётся по таймаутам, плохо переживает обновление</td><td data-l="Как закрываем">1С только <b>публикует</b>. Входящее — HTTP-сервисом или служба-посредник на стороне сайта дёргает HTTP 1С</td></tr>
+      <tr><td>Транзакции</td><td data-l="Суть">Внутри транзакции публиковать нельзя, после записи — теряется при падении</td><td data-l="Как закрываем">Нужен <b>outbox</b> — в 1С он уже есть: это <b>план обмена</b>. Регистрация снимается только после успешной публикации</td></tr>
+      <tr><td>Наблюдаемость</td><td data-l="Суть">Нет привычных журнала регистрации и кода ответа HTTP</td><td data-l="Как закрываем">Доступ к панели RabbitMQ, метрика глубины очередей, оповещение при росте</td></tr>
+      <tr><td>Эксплуатация</td><td data-l="Суть">Брокер — отдельный сервис: обновления, диск, устойчивость</td><td data-l="Как закрываем">Типовой отказ — <b>дисковый</b>: разросшиеся логи способны остановить бэкап. Ротация и мониторинг диска обязательны</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide" id="s4">
+  <div class="in">
+    <div class="kicker"><span class="n">3</span>Чего ожидать от платформы 1С</div>
+    <h2 class="title">Где проходит граница REST ↔ брокер</h2>
+    <div class="split">
+      <div>
+        <table class="tbl route">
+          <thead><tr><th>Сценарий</th><th>Чем</th><th>Почему</th></tr></thead>
+          <tbody>
+          <tr><td>Проверить остаток, цену, наличие</td><td data-l="Чем"><span class="tag-rest">REST</span></td><td data-l="Почему">Нужен ответ здесь и сейчас</td></tr>
+          <tr><td>Заказ с подтверждением клиенту</td><td data-l="Чем"><span class="tag-rest">REST</span></td><td data-l="Почему">Ответ — часть сценария покупки</td></tr>
+          <tr><td>Выгрузка цен, остатков, карточек</td><td data-l="Чем"><span class="tag-mq">Брокер</span></td><td data-l="Почему">Поток, пики, несколько получателей</td></tr>
+          <tr><td>События покупателя</td><td data-l="Чем"><span class="tag-mq">Брокер</span></td><td data-l="Почему">Регистрация, бонусы: получателей несколько, порядок не критичен</td></tr>
+          <tr><td>Клиент в облачной 1С</td><td data-l="Чем"><span class="tag-rest">REST</span></td><td data-l="Почему">1cFresh: внешние компоненты недоступны</td></tr>
+          <tr><td>Некому администрировать</td><td data-l="Чем"><span class="tag-rest">REST</span></td><td data-l="Почему">Брокер требует сопровождения</td></tr>
+          </tbody>
+        </table>
+        <p class="legend">Нужен синхронный ответ или нет ресурса на сопровождение — REST. Поток и много получателей — брокер.</p>
+      </div>
+      <aside class="not">
+        <div class="lbl">Важно</div>
+        <h3>Чего брокер НЕ делает</h3>
+        <div class="it"><h4>Не улучшает качество данных</h4><p>Кривые цены и неполные поля лечатся в 1С, а не в транспорте.</p></div>
+        <div class="it"><h4>Не заменяет полную перезаливку</h4><p>При расхождении сторон нужен отдельный механизм сверки.</p></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="slide final" id="s5">
+  <div class="in">
+    <div class="kicker"><span class="n">✓</span>Материалы</div>
+    <h2 class="title">Скачать и передать подрядчику</h2>
+    <p class="lede">PDF свёрстаны под A4 и чёрно-белую печать. Интерактивная версия плана с чек-листом приёмки — <a href="plan.html">на отдельной странице</a>.</p>
+    <div class="downloads">
+      <a class="dl" href="files/1c-rabbitmq-presentation.pdf" download><span class="ico">PDF</span><div><b>1. Презентация</b><span>Обмен 1С ↔ сайт через RabbitMQ · A4, 5 стр.</span></div></a>
+      <a class="dl" href="files/1c-rabbitmq-plan.pdf" download><span class="ico">PDF</span><div><b>2. План работ</b><span>Для 1С-программиста · A4, 5 стр.</span></div></a>
+    </div>
+    <div class="cta" style="margin-top:22px">
+      <h2>Нужна помощь с обменом 1С ↔ Битрикс24?</h2>
+      <p>Оставьте заявку — обсудим задачу и сроки.</p>
+      <div class="btns"><a class="btn primary" href="https://offer.bx-shef.by/">Заказать <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a><a class="btn ghost-dark" href="plan.html">Открыть план работ</a></div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/deck.js" defer></script>
+</body>
+</html>
