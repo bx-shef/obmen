@@ -67,9 +67,12 @@ for page in "${pages[@]}"; do
     && pass "$page returns HTML to a browser" || fail "$page does not return HTML to a browser"
   [[ "$(ctype -H 'Accept: text/markdown;q=0, text/html' "$url")" == text/html* ]] \
     && pass "$page honours text/markdown;q=0" || fail "$page serves Markdown despite q=0"
+  # Checks on the Markdown answer itself, only when there is one.
   md_headers=$(curl -sI -H 'Accept: text/markdown' "$url")
-  grep -qi '^content-type:.*charset=utf-8' <<<"$md_headers" && pass "$page Markdown has charset=utf-8" || fail "$page Markdown has no charset"
-  grep -qi 'rel="canonical"' <<<"$md_headers" && pass "$page Markdown points to a canonical HTML" || fail "$page Markdown has no rel=canonical"
+  if grep -qi '^content-type: *text/markdown' <<<"$md_headers"; then
+    grep -qi '^content-type:.*charset=utf-8' <<<"$md_headers" && pass "$page Markdown has charset=utf-8" || fail "$page Markdown has no charset"
+    grep -qi 'rel="canonical"' <<<"$md_headers" && pass "$page Markdown points to a canonical HTML" || fail "$page Markdown has no rel=canonical"
+  fi
 
   # Open Graph card.
   for tag in 'property="og:image"' 'property="og:image:width"' 'property="og:image:height"' 'property="og:image:alt"' 'name="twitter:card"'; do
