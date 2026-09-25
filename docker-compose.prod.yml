@@ -1,0 +1,45 @@
+# Production — place on the server in /home/bitrix/obmen/
+# Requires (host-wide, shared with client-bank-alfa-by / currency-converter):
+#   - docker network proxy-net with nginx-proxy + acme-companion;
+#   - a single Watchtower running with --label-enable (picks this container up by label).
+# Do NOT start a second Watchtower here: it conflicts on container_name and
+# causes double restarts.
+#
+# .env next to this file: DOMAIN, LETSENCRYPT_EMAIL.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+services:
+  app:
+    logging: *default-logging
+    image: ghcr.io/bx-shef/obmen:latest
+    container_name: obmen
+    expose:
+      - "8080"
+    environment:
+      VIRTUAL_HOST: ${DOMAIN:?set DOMAIN}
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: ${DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-}
+    restart: unless-stopped
+    healthcheck:
+      # 127.0.0.1, not localhost: nginx listens IPv4 only, and `localhost` may
+      # resolve to ::1 first — the container would sit "unhealthy" while serving fine.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - proxy-net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+networks:
+  proxy-net:
+    external: true
