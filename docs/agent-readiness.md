@@ -28,6 +28,23 @@ Run these against the live site before and after changes. Replace `$SITE`.
 
 ### 2.1 From the command line
 
+Run the audit script — it prints PASS / FAIL per check and exits non-zero on a
+failure. It needs only `curl` and `python3`, so it works for any site:
+
+```bash
+scripts/agent-audit.sh https://obmen.bx-shef.by              # pages / and /plan.html
+scripts/agent-audit.sh https://example.bx-shef.by / /about.html
+```
+
+It checks: robots.txt lets `ChatGPT-User`, `Claude-User`, `Perplexity-User`
+in; `/llms.txt` is text and starts with an H1; for each page — the Markdown twin
+link and its type, `rel="describedby"`, `Vary: Accept`, the `Link` header,
+negotiation for an agent, a browser and `q=0`, `charset=utf-8` and
+`rel="canonical"` on the Markdown, the Open Graph tags and a 1200×630 PNG card.
+The tone of the text (3.3) is not checkable by a script — read it.
+
+The same checks by hand, when you need to see the raw answers:
+
 ```bash
 SITE=https://obmen.bx-shef.by
 
@@ -82,13 +99,21 @@ Nothing measures agent traffic by default. When it matters, log the `Accept`
 header and user agent in nginx and count:
 
 ```nginx
-# http context: define the format; server context: use it
+# http context (top level of the conf.d file):
 log_format agents '$time_iso8601 $status "$request" "$http_accept" "$http_user_agent"';
-access_log /var/log/nginx/access.log agents;   # stdout in the nginx image
+
+server {
+    access_log /var/log/nginx/access.log agents;   # stdout in the nginx image
+    # …
+}
 ```
 
+This format leaves out the client IP (`$remote_addr`), which is personal data;
+the default `combined` format includes it. Keep logs bounded either way: the
+production compose file rotates container logs (`json-file`, 10 MB × 3).
+
 ```bash
-docker logs obmen 2>&1 | grep -c 'text/markdown'
+docker logs <container> 2>&1 | grep -c 'text/markdown'
 ```
 
 ## 3. What to publish
@@ -147,7 +172,9 @@ who, what, how much, where to write. No hidden text, no text only agents see.
 ### 3.4 The offer block
 
 Prices, discount, contractor and contact live in **one block**, identical in
-every file that carries it, fenced by HTML comments so CI can compare them:
+every file that carries it, fenced by HTML comments so CI can compare them.
+The block below is obmen's — replace the contractor, prices and terms with the
+site's own:
 
 ```markdown
 <!-- offer:start — keep identical in site/llms.txt and site/index.md (CI compares) -->
@@ -181,10 +208,13 @@ compared by CI; the rest relies on review.
 
 ## 4. nginx
 
-Full working config: [`nginx.conf`](../nginx.conf). The parts that matter:
+Full working config: [`nginx.conf`](https://github.com/bx-shef/obmen/blob/main/nginx.conf). The parts that matter
+(shortened — the real file has one line per URL in each map, including
+`/index.html` next to `/`):
 
 ```nginx
 # http context (a conf.d file is included there, so top level of the file works)
+# One line per page URL that has a twin — list /index.html as well as /.
 map "$uri|$http_accept" $markdown_target {
     default "";
     "~*^/\|.*text/markdown(?!\s*;\s*q=0(?:\.0+)?\s*(?:[,;]|$))"          /index.md;
@@ -252,8 +282,8 @@ What each piece is for, and the traps:
 
 ## 5. CI checks
 
-All in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), step
-"Smoke test container", run against the built image:
+All in [`.github/workflows/ci.yml`](https://github.com/bx-shef/obmen/blob/main/.github/workflows/ci.yml), step
+"Smoke test container", run against the built image. Agent-related:
 
 - every `site/*.html` has `<link rel="alternate" type="text/markdown">`, and the
   twin is served as `text/markdown`;
@@ -263,7 +293,14 @@ All in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), step
 - every `https://obmen.bx-shef.by/…` link in `llms.txt`, `index.md`, `plan.md`
   returns 200 (links to other domains are skipped);
 - the offer block is identical in `llms.txt` and `index.md` (`sed` between the
-  markers + `diff`).
+  markers + `diff`);
+- per page: exactly one `og:image` at `/files/<name>.png` on the canonical
+  domain, served as `image/png`, 1200×630 by the PNG header; the other
+  required OG / Twitter tags (section 6) are present.
+
+The same step also checks the rest of the site: security headers on the HTML,
+200 for every asset, PDF, `robots.txt` and `sitemap.xml`, 404 for an unknown
+path.
 
 Write negative tests when adding a check: break the input on purpose and make
 sure the step fails with a readable `::error::`.
@@ -280,8 +317,8 @@ Agents and messengers both use the preview:
 - Fonts: list your own fonts as fallbacks (`Manrope, Inter, JB`). A glyph missing
   from the main font (`↔`, `✕`) otherwise falls back to a system font that
   differs between machines. Check with `fontTools` which font has the glyph.
-- CI: exactly one `og:image` per page, path `/files/<name>.png`, served as
-  `image/png`, size read from the PNG header.
+- CI checks all of the above except the picture itself: look at the `rendered`
+  artifact of the CI run before merging.
 
 ## 7. Lessons from the implementation
 
@@ -306,11 +343,13 @@ Agents and messengers both use the preview:
 2. `llms.txt`: H1, summary, prose with the offer block, H2 link lists,
    `## Optional` (3.2, 3.4).
 3. A hand-written `.md` twin for every important page; absolute URLs; facts,
-   not orders (3.1, 3.3).
+   not orders (3.1, 3.3). Write down where each text lives and keep the
+   copies in sync (3.5).
 4. `<link rel="alternate" type="text/markdown">` and
    `<link rel="describedby" href="/llms.txt">` in every page's `<head>`.
 5. nginx: `.md` type, negotiation with `q=0` and anchored URI, `Vary`, `Link`,
    canonical, charset and gzip for `text/markdown` (4).
 6. OG card per page, 1200×630 (6).
 7. CI: the checks in section 5, each with a negative test.
-8. After deploy, run the audit in 2.1 against the live site.
+8. After deploy (wait ~5 minutes for Watchtower), run
+   `scripts/agent-audit.sh <site>` against the live site (2.1).
