@@ -32,7 +32,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Every local href/src in the pages must point to a committed file.
-      # A missing PDF would otherwise ship as a silent 404 on the download button.
+      # Exception: files/*.pdf in site/ are rendered from print/ during the
+      # Docker build; the smoke test below checks them in the built image.
       # Scope: href/src attributes in site/*.html and print/*.html (either quote
       # style), plus url() in print/fonts.css; srcset, other CSS and paths inside
       # JS are not checked. Paths resolve relative to the file that holds them.
@@ -52,6 +53,9 @@ jobs:
             dir=$(dirname "$page")
             # Drop ?query / #fragment; skip pure anchors and anything with a scheme.
             while IFS= read -r ref; do
+              if [ "$dir" = site ] && [[ "$ref" == files/*.pdf ]]; then
+                continue
+              fi
               if [ ! -e "$dir/$ref" ]; then
                 echo "::error file=$page::missing target: $ref"
                 fail=1
@@ -87,7 +91,7 @@ jobs:
           tags: obmen:ci
 
       # `nginx -t` only proves the syntax. This catches what it cannot: a page or
-      # PDF answering 404, or a location that lost the security headers
+      # rendered PDF answering 404, or a location that lost the security headers
       # (add_header is not inherited once a location declares its own).
       - name: Smoke test container
         shell: bash
@@ -106,13 +110,37 @@ jobs:
               grep -qi "^$h:" <<<"$headers" || { echo "::error::$path lacks $h"; fail=1; }
             done
           done
-          for f in site/files/* site/assets/* site/robots.txt site/sitemap.xml; do
+          for f in site/assets/* site/robots.txt site/sitemap.xml; do
             path=${f#site}
             curl -fsS -o /dev/null "http://127.0.0.1:8080$path" || { echo "::error::$path is not 200"; fail=1; }
+          done
+          # PDFs rendered in the image's build stage (print/render.py). The list
+          # comes from the pages' links, so a new or mistyped PDF link is caught
+          # here (the link check skips files/*.pdf). Saved for the artifact below.
+          mkdir -p pdf
+          pdfs=$(grep -ohE "(href|src)=[\"']files/[^\"'?#]+\.pdf" site/*.html | sed -E "s/^(href|src)=[\"']//" | sort -u)
+          [ -n "$pdfs" ] || { echo "::error::no PDF links found in site/*.html"; fail=1; }
+          for ref in $pdfs; do
+            path=/$ref
+            type=$(curl -fsS -o "pdf/${ref##*/}" -w '%{content_type}' "http://127.0.0.1:8080$path") \
+              || { echo "::error::$path is not 200"; fail=1; continue; }
+            [ "$type" = application/pdf ] || { echo "::error::$path is $type, expected application/pdf"; fail=1; }
+            head -c 5 "pdf/${ref##*/}" | grep -q '^%PDF-' || { echo "::error::$path is not a PDF file"; fail=1; }
+            [ "$(stat -c %s "pdf/${ref##*/}")" -gt 10000 ] || { echo "::error::$path is suspiciously small"; fail=1; }
           done
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/no-such-page)
           [ "$code" = 404 ] || { echo "::error::unknown path returned $code, expected 404"; fail=1; }
           exit $fail
+
+      # The PDFs are build output and no longer show up in the PR diff:
+      # download them from the run's artifacts to review the rendered result.
+      - name: Upload rendered PDFs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pdf
+          path: pdf/*.pdf
+          if-no-files-found: error
+          retention-days: 14
 
   deploy:
     name: Build & Push to GHCR

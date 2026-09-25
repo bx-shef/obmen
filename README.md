@@ -7,8 +7,8 @@ engineer, a work plan for the 1C contractor, and both as print-ready PDFs.
 
 - `site/index.html` — presentation (responsive, keyboard navigation)
 - `site/plan.html` — work plan with an interactive acceptance checklist
-- `site/files/*.pdf` — A4, optimised for black-and-white printing
-- `print/` — sources of those PDFs and the script that renders them
+- `/files/*.pdf` — A4, optimised for black-and-white printing; rendered from
+  `print/` during the Docker build, not stored in git
 
 Same delivery scheme as [`client-bank-alfa-by`](https://github.com/bx-shef/client-bank-alfa-by):
 **GHCR + Watchtower behind the shared nginx-proxy** (TLS via Let's Encrypt).
@@ -23,7 +23,7 @@ docker compose up --build      # http://localhost:8082
 
 | Trigger | Runs |
 |---|---|
-| Pull request → `main` | `ci`: local link check, image build (`nginx -t` inside), container smoke test (200s + security headers), no push |
+| Pull request → `main` | `ci`: local link check, image build (PDFs rendered from `print/`, `nginx -t`), container smoke test (200s, security headers, PDFs), no push |
 | Push to `main` | `ci` → `deploy`: push `ghcr.io/bx-shef/obmen:latest` and `:sha-<short>` |
 | Manual run (`workflow_dispatch`) | same as push; `deploy` runs only when started on `main` |
 
@@ -92,26 +92,45 @@ re-run the `curl` above and `up -d`.
 
 ## Updating content
 
-Edit files in `site/`, open a PR, merge. Keep the PDF file names unchanged so
-the links keep working.
+Edit files in `site/` and `print/`, open a PR, merge. The PDFs are rebuilt on
+every image build, so a merged change always ships with matching PDFs.
 
-The PDFs are rendered from **separate print sources**, not from the web pages:
+The PDFs come from **separate print sources**, not from the web pages:
 
-| PDF | Source | Layout |
+| PDF (served at) | Source | Layout |
 |---|---|---|
-| `site/files/1c-rabbitmq-presentation.pdf` | `print/presentation.html` | A4 landscape, 5 slides |
-| `site/files/1c-rabbitmq-plan.pdf` | `print/plan.html` | A4 portrait, page numbers in footer |
+| `/files/1c-rabbitmq-presentation.pdf` | `print/presentation.html` | A4 landscape, 5 slides |
+| `/files/1c-rabbitmq-plan.pdf` | `print/plan.html` | A4 portrait, page numbers in footer |
 
-⚠ The text exists twice — in `site/*.html` and in `print/*.html`. A content change
-must be made in both, then the PDFs re-rendered in the same PR:
+⚠ The text exists twice — in `site/*.html` and in `print/*.html`. A content
+change must be made in both. File names are fixed in `print/render.py`; keep
+them, the pages link to them.
+
+How the PDFs are built: the first `Dockerfile` stage runs `print/render.py` on
+`mcr.microsoft.com/playwright/python:v1.56.0-noble` (pinned by digest), the
+nginx stage copies the result into `/files/`. Every CI run uploads the rendered
+PDFs as the `pdf` artifact (Actions → run → Artifacts) — look there to review
+how a change renders, since the PDFs are not in the PR diff.
+
+The image tag and `print/requirements.txt` must name the same Playwright
+version — each release bundles its own Chromium, and a mismatch fails the
+build. Dependabot skips this image, so bump both by hand in one PR (tag,
+digest, requirements) when a Playwright release matters.
+
+Trade-off: every image build now pulls from `mcr.microsoft.com` and PyPI. If
+either is down, CI and the deploy fail; the site already running keeps
+serving the previous image.
+
+To look at a PDF before pushing, render it locally (writes `site/files/*.pdf`,
+ignored by git) or run `docker compose up --build`:
 
 ```bash
-pip install -r print/requirements.txt   # pinned Playwright = pinned Chromium
+pip install -r print/requirements.txt
 python -m playwright install chromium
-python print/render.py        # overwrites site/files/*.pdf
+python print/render.py   # writes site/files/*.pdf
 ```
 
 Fonts are static instances of OFL fonts in `print/fonts/` (licences next to them):
 Chromium embeds variable fonts as Type 3, which printer drivers rasterise.
-Symbol glyphs missing from these fonts (✕, ✓) fall back to a system font, so the
-result can differ slightly between machines.
+Symbol glyphs missing from these fonts (✕, ✓) fall back to a system font, so a
+local render can differ slightly from the one built in Docker.

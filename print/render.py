@@ -1,13 +1,13 @@
 """Render the print sources in this folder to the PDFs served by the site.
 
-Usage (from the repo root):
+Runs in the first stage of the Dockerfile on every image build; the PDFs are
+build output and are not committed. For a local preview (from the repo root):
     pip install -r print/requirements.txt
     python -m playwright install chromium
     python print/render.py
 
-Playwright is pinned: each release bundles its own Chromium, and a different
-Chromium lays out and embeds fonts differently, so an unpinned install would
-turn every re-render into a noisy binary diff.
+Playwright is pinned (here and in the Dockerfile image tag): each release
+bundles its own Chromium, which lays out and embeds fonts differently.
 
 Writes site/files/1c-rabbitmq-presentation.pdf and site/files/1c-rabbitmq-plan.pdf.
 """

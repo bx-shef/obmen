@@ -10,3 +10,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      # Must move together with playwright in print/requirements.txt (the
+      # image's Chromium matches one Playwright release); bump both by hand.
+      - dependency-name: "*playwright*"
