@@ -106,7 +106,7 @@ The PDFs are rendered from **separate print sources**, not from the web pages:
 must be made in both, then the PDFs re-rendered in the same PR:
 
 ```bash
-pip install playwright
+pip install -r print/requirements.txt   # pinned Playwright = pinned Chromium
 python -m playwright install chromium
 python print/render.py        # overwrites site/files/*.pdf
 ```

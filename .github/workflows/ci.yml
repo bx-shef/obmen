@@ -33,8 +33,9 @@ jobs:
 
       # Every local href/src in the pages must point to a committed file.
       # A missing PDF would otherwise ship as a silent 404 on the download button.
-      # Scope: href/src attributes in site/*.html only (either quote style);
-      # srcset, CSS url() and paths inside JS are not checked.
+      # Scope: href/src attributes in site/*.html and print/*.html (either quote
+      # style), plus url() in print/fonts.css; srcset, other CSS and paths inside
+      # JS are not checked. Paths resolve relative to the file that holds them.
       - name: Check local links
         shell: bash
         run: |
@@ -45,11 +46,13 @@ jobs:
             echo "::error::no HTML pages found in site/"
             exit 1
           fi
+          pages+=(print/*.html)
           fail=0
           for page in "${pages[@]}"; do
+            dir=$(dirname "$page")
             # Drop ?query / #fragment; skip pure anchors and anything with a scheme.
             while IFS= read -r ref; do
-              if [ ! -e "site/$ref" ]; then
+              if [ ! -e "$dir/$ref" ]; then
                 echo "::error file=$page::missing target: $ref"
                 fail=1
               fi
@@ -58,6 +61,15 @@ jobs:
                        | grep -vE '^$|^[A-Za-z][A-Za-z0-9+.-]*:|^//' \
                        | sort -u || true)
           done
+          # The print pages load their fonts through CSS, not href/src.
+          while IFS= read -r ref; do
+            if [ ! -e "print/$ref" ]; then
+              echo "::error file=print/fonts.css::missing target: $ref"
+              fail=1
+            fi
+          done < <(grep -oE 'url\([^)]+\)' print/fonts.css \
+                     | sed -E "s/^url\(//; s/\)$//; s/^[\"']//; s/[\"']$//" \
+                     | sort -u || true)
           exit $fail
 
       - name: Set up Docker Buildx

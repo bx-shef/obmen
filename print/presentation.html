@@ -2,7 +2,6 @@
 <html lang="ru"><head><meta charset="utf-8"><title>Обмен 1С ↔ сайт через RabbitMQ — презентация</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
-@page{size:1280px 720px;margin:0}
 :root{
   --ink:#0E1726; --ink2:#2B3547; --mute:#6B7486; --line:#E3E0D8;
   --paper:#FAF8F3; --card:#FFFFFF;
@@ -114,6 +113,7 @@ td b{color:var(--ink)}
 </style>
 <style>
 /* ===== B/W print overrides, A4 landscape ===== */
+/* The only @page rule: render.py uses the CSS page size. */
 @page{size:297mm 210mm;margin:0}
 :root{--ink:#000;--ink2:#1a1a1a;--mute:#555;--line:#9a9a9a;--paper:#fff;--card:#fff;
 --or:#000;--or-soft:#fff;--teal:#000;--teal-soft:#fff;--yel:#000;--yel-soft:#fff;--red:#000;--red-soft:#fff}

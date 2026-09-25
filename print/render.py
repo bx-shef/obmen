@@ -1,9 +1,13 @@
 """Render the print sources in this folder to the PDFs served by the site.
 
 Usage (from the repo root):
-    pip install playwright
+    pip install -r print/requirements.txt
     python -m playwright install chromium
     python print/render.py
+
+Playwright is pinned: each release bundles its own Chromium, and a different
+Chromium lays out and embeds fonts differently, so an unpinned install would
+turn every re-render into a noisy binary diff.
 
 Writes site/files/1c-rabbitmq-presentation.pdf and site/files/1c-rabbitmq-plan.pdf.
 """
@@ -34,6 +38,7 @@ def main() -> None:
         # Presentation: page size (A4 landscape) comes from @page in the HTML.
         page.goto((HERE / "presentation.html").as_uri())
         page.wait_for_load_state("networkidle")
+        page.evaluate("document.fonts.ready.then(() => true)")
         page.pdf(
             path=str(OUT / "1c-rabbitmq-presentation.pdf"),
             print_background=True,
@@ -43,6 +48,7 @@ def main() -> None:
         # Plan: A4 portrait, page numbers in the footer.
         page.goto((HERE / "plan.html").as_uri())
         page.wait_for_load_state("networkidle")
+        page.evaluate("document.fonts.ready.then(() => true)")
         page.pdf(
             path=str(OUT / "1c-rabbitmq-plan.pdf"),
             format="A4",
