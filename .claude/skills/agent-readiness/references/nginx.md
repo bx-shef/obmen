@@ -74,4 +74,4 @@ What each piece is for, and the traps:
 - Add `text/markdown` to `charset_types` (Cyrillic needs `charset=utf-8`) and
   `gzip_types`. Remember `text/xml` too: `sitemap.xml` is served as `text/xml`,
   not `application/xml`.
-- Validate: `docker run --rm -v $PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginxinc/nginx-unprivileged:1.31-alpine nginx -t`
+- Validate: `docker run --rm -v $PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx/nginx-unprivileged:1.31.9-alpine nginx -t`
