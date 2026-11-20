@@ -15,7 +15,7 @@ RUN python print/render.py
 
 # Stage 2: static site. nginx-unprivileged runs as the non-root `nginx` user
 # and listens on :8080.
-FROM nginxinc/nginx-unprivileged:1.31-alpine AS runner
+FROM nginx/nginx-unprivileged:1.31.9-alpine AS runner
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY site/ /usr/share/nginx/html/
 COPY --from=pdf /src/site/files/ /usr/share/nginx/html/files/
